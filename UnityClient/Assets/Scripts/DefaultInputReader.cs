@@ -7,7 +7,9 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
     public PlayerInputData ReadInput(uint time) {
         
         var movementAxes = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        var rotationAxes = new Vector2(Input.GetAxis("RightStickX"), Input.GetAxis("RightStickY"));
+        // die Rotation hier ist etwas komisch. Wir müssen die Achsen vertauschen weil der Spieler
+        // standardmäßig in Richtung z schaut und nicht in Richtung x
+        var rotationAxes = new Vector2(Input.GetAxis("RightStickY"), -Input.GetAxis("RightStickX"));//.Perpendicular();
         var inputs = new bool[2];
         
         inputs[0] = Input.GetMouseButton(0);
