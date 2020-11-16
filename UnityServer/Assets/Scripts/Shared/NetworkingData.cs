@@ -11,6 +11,9 @@ public enum MessageTag : ushort {
     JoinRoomDenied = 102,
 
     GameInput = 200,
+    GameUpdate = 201,
+    StartGameRequest = 202,
+    StartGameResponse = 203,
 }
 
 public struct LoginRequestData : IDarkRiftSerializable {
@@ -158,5 +161,101 @@ public struct PlayerStateData : IDarkRiftSerializable {
         e.Writer.Write(Position.y);
         e.Writer.Write(Position.z);
         e.Writer.WriteQuaternion(Rotation);
+    }
+}
+
+public struct PlayerSpawnData : IDarkRiftSerializable {
+    public ushort Id;
+    public ushort PrefabIndex;
+    public string Name;
+    public Vector3 Position;
+
+    public PlayerSpawnData(ushort id, ushort prefabIndex, string name, Vector3 position) {
+        Id = id;
+        PrefabIndex = prefabIndex;
+        Name = name;
+        Position = position;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        Id = e.Reader.ReadUInt16();
+        PrefabIndex = e.Reader.ReadUInt16();
+        Name = e.Reader.ReadString();
+        Position = new Vector3(e.Reader.ReadSingle(), e.Reader.ReadSingle(), e.Reader.ReadSingle());
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(Id);
+        e.Writer.Write(PrefabIndex);
+        e.Writer.Write(Name);
+        e.Writer.Write(Position.x);
+        e.Writer.Write(Position.y);
+        e.Writer.Write(Position.z);
+    }
+}
+
+public struct PlayerDespawnData : IDarkRiftSerializable {
+    public ushort Id;
+
+    public PlayerDespawnData(ushort id) {
+        Id = id;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        Id = e.Reader.ReadUInt16();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(Id);
+    }
+}
+
+public struct GameUpdateData : IDarkRiftSerializable {
+
+    public uint Frame;
+    public PlayerStateData[] PlayerStates;
+    public PlayerSpawnData[] SpawnData;
+    public PlayerDespawnData[] DespawnData;
+
+    public GameUpdateData(uint frame, PlayerStateData[] playerStates, PlayerSpawnData[] spawnData, PlayerDespawnData[] despawnData) {
+        Frame = frame;
+        PlayerStates = playerStates;
+        SpawnData = spawnData;
+        DespawnData = despawnData;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        Frame = e.Reader.ReadUInt32();
+        PlayerStates = e.Reader.ReadSerializables<PlayerStateData>();
+        SpawnData = e.Reader.ReadSerializables<PlayerSpawnData>();
+        DespawnData = e.Reader.ReadSerializables<PlayerDespawnData>();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(Frame);
+        e.Writer.Write(PlayerStates);
+        e.Writer.Write(SpawnData);
+        e.Writer.Write(DespawnData);
+    }
+}
+
+public struct GameStartData : IDarkRiftSerializable {
+
+    public uint ServerTick;
+    public PlayerSpawnData[] Players;
+
+    public GameStartData(uint serverTick, PlayerSpawnData[] players) {
+        ServerTick = serverTick;
+        Players = players;
+    }
+    
+    public void Deserialize(DeserializeEvent e) {
+        ServerTick = e.Reader.ReadUInt32();
+        Players = e.Reader.ReadSerializables<PlayerSpawnData>();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(ServerTick);
+        e.Writer.Write(Players);
     }
 }

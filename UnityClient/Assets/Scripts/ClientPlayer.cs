@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using DarkRift;
+using UnityEngine;
 
 [RequireComponent(typeof(PlayerController))]
 [RequireComponent(typeof(PlayerInterpolation))]
@@ -13,27 +14,47 @@ public class ClientPlayer : MonoBehaviour {
     private bool isLocalPlayer;
     private string playerName;
 
+    public void Initialize(ushort id, string playerName) {
+        this.id = id;
+        this.playerName = playerName;
+
+        if (this.id == ConnectionManager.Instance.PlayerID) {
+            isLocalPlayer = true;
+            interpolation.CurrentStateData = new PlayerStateData(this.id, Vector3.zero, Quaternion.identity);
+        }
+    }
+
+    public void UpdatePlayerState(PlayerStateData playerState) {
+        if (isLocalPlayer) {
+
+        } else {
+            interpolation.PushStateData(playerState);
+        }
+    }
+
     private void Awake() {
         playerController = GetComponent<PlayerController>();
         interpolation = GetComponent<PlayerInterpolation>();
         inputReader = GetComponent<IInputReader>();
     }
 
-    private void Start() {
-        interpolation.CurrentStateData = new PlayerStateData(id, Vector3.zero, Quaternion.identity);
-    }
-
     private void FixedUpdate() {
 
-        var inputData = inputReader.ReadInput(0);
+        if (isLocalPlayer) {
+            var inputData = inputReader.ReadInput(0);
 
-        // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
-        transform.position = interpolation.CurrentStateData.Position;
-        
-        // dann holen wir uns die Daten für den nächsten Frame
-        var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
+            // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
+            transform.position = interpolation.CurrentStateData.Position;
 
-        // dann starten wir die Interpolation
-        interpolation.PushStateData(nextStateData);
+            // dann holen wir uns die Daten für den nächsten Frame
+            var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
+
+            // dann starten wir die Interpolation
+            interpolation.PushStateData(nextStateData);
+
+            using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {
+                ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
+            }
+        }
     }
 }
