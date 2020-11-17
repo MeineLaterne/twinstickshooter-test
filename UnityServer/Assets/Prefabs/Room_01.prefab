@@ -237,6 +237,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   roomName: 
   slots: 2
+  playerPrefab: {fileID: 6205159830199829926, guid: 7ecde7e62e8b3d5409723998e669dc75,
+    type: 3}
 --- !u!1 &5152221314665605021
 GameObject:
   m_ObjectHideFlags: 0

@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour {
     [SerializeField] private GameObject[] playerPrefabs;
 
     private readonly Dictionary<ushort, ClientPlayer> players = new Dictionary<ushort, ClientPlayer>();
+    private readonly QueueBuffer<GameUpdateData> buffer = new QueueBuffer<GameUpdateData>(1);
 
     private void Awake() {
         if (Instance != null) {
@@ -51,7 +52,37 @@ public class GameManager : MonoBehaviour {
 
     private void OnGameStart(GameStartData startData) { }
 
-    private void OnGameUpdate(GameUpdateData updateData) {
+    private void OnGameUpdate(GameUpdateData updateData) => buffer.Add(updateData);
+
+    private void FixedUpdate() {
+        ClientTick++;
+        var dataToProcess = buffer.Get();
+        foreach (var data in dataToProcess) {
+            UpdateClientGameState(data);
+        }
+    }
+
+    private void UpdateClientGameState(GameUpdateData updateData) {
+        LastServerTick = updateData.Frame;
+
+        foreach (var spawnData in updateData.SpawnData) {
+            if (spawnData.Id != ConnectionManager.Instance.PlayerID) {
+                SpawnPlayer(spawnData);
+            }
+        }
+
+        foreach (var despawnData in updateData.DespawnData) {
+            if (players.ContainsKey(despawnData.Id)) {
+                Destroy(players[despawnData.Id].gameObject);
+                players.Remove(despawnData.Id);
+            }
+        }
+
+        foreach (var playerState in updateData.PlayerStates) {
+            if (players.TryGetValue(playerState.Id, out ClientPlayer p)) {
+                p.UpdatePlayerState(playerState);
+            }
+        }
 
     }
 

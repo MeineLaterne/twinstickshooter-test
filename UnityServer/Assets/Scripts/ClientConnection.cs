@@ -6,6 +6,7 @@ public class ClientConnection {
     public readonly IClient client;
 
     public Room Room { get; set; }
+    public ServerPlayer ServerPlayer { get; set; }
 
     public ClientConnection(string userName, IClient client) {
         this.userName = userName;
@@ -26,9 +27,20 @@ public class ClientConnection {
         var client = (IClient)sender;
         using (var m = e.GetMessage()) {
             switch ((MessageTag)m.Tag) {
+
+                case MessageTag.GameInput:
+                    ServerPlayer.ReceiveInput(m.Deserialize<PlayerInputData>());
+                    break;
+                
                 case MessageTag.JoinRoomRequest:
                     RoomManager.Instance.TryJoinRoom(client, m.Deserialize<JoinRoomRequestData>());
                     break;
+
+                case MessageTag.StartGameRequest:
+                    Room.SpawnPlayer(this);
+                    break;
+
+
             }
         }
     }
