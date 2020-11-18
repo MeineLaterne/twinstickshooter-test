@@ -137,7 +137,7 @@ public struct PlayerInputData : IDarkRiftSerializable {
     }
 }
 
-public struct PlayerStateData : IDarkRiftSerializable, IInterpolatable {
+public struct PlayerStateData : IDarkRiftSerializable {
 
     public ushort Id;
     public Vector3 Position;
@@ -161,11 +161,6 @@ public struct PlayerStateData : IDarkRiftSerializable, IInterpolatable {
         e.Writer.Write(Position.y);
         e.Writer.Write(Position.z);
         e.Writer.WriteQuaternion(Rotation);
-    }
-
-    public void Interpolate(Transform transform, IInterpolatable nextState, float t) {
-        transform.position = Vector3.LerpUnclamped(Position, ((PlayerStateData)nextState).Position, t);
-        transform.rotation = Quaternion.SlerpUnclamped(Rotation, ((PlayerStateData)nextState).Rotation, t);
     }
 }
 
@@ -267,20 +262,24 @@ public struct GameStartData : IDarkRiftSerializable {
 
 public struct BulletStateData : IDarkRiftSerializable {
     public ushort Id;
+    public ushort PlayerId;
     public Vector3 Position;
 
-    public BulletStateData(ushort id, Vector3 position) {
+    public BulletStateData(ushort id, ushort clientId, Vector3 position) {
         Id = id;
+        PlayerId = clientId;
         Position = position;
     }
 
     public void Deserialize(DeserializeEvent e) {
         Id = e.Reader.ReadUInt16();
+        PlayerId = e.Reader.ReadUInt16();
         Position = new Vector3(e.Reader.ReadSingle(), e.Reader.ReadSingle(), e.Reader.ReadSingle());
     }
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Id);
+        e.Writer.Write(PlayerId);
         e.Writer.Write(Position.x);
         e.Writer.Write(Position.y);
         e.Writer.Write(Position.z);
@@ -290,24 +289,28 @@ public struct BulletStateData : IDarkRiftSerializable {
 public struct BulletSpawnData : IDarkRiftSerializable {
 
     public ushort Id;
+    public ushort PlayerId;
     public Vector3 Position;
     public Vector3 Velocity;
 
-    public BulletSpawnData(ushort id, Vector3 position, Vector3 velocity) {
+    public BulletSpawnData(ushort id, ushort playerId, Vector3 position, Vector3 velocity) {
         Id = id;
+        PlayerId = playerId;
         Position = position;
         Velocity = velocity;
     }
 
     public void Deserialize(DeserializeEvent e) {
         Id = e.Reader.ReadUInt16();
+        PlayerId = e.Reader.ReadUInt16();
         Position = new Vector3(e.Reader.ReadSingle(), e.Reader.ReadSingle(), e.Reader.ReadSingle());
         Velocity = new Vector3(e.Reader.ReadSingle(), e.Reader.ReadSingle(), e.Reader.ReadSingle());
     }
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Id);
-        
+        e.Writer.Write(PlayerId);
+
         e.Writer.Write(Position.x);
         e.Writer.Write(Position.y);
         e.Writer.Write(Position.z);

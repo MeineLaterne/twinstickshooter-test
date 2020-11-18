@@ -10,3 +10,13 @@ struct ReconciliationInfo {
         InputData = inputData;
     }
 }
+
+struct BulletReconciliationInfo {
+    public uint Frame;
+    public BulletStateData StateData;
+
+    public BulletReconciliationInfo(uint frame, BulletStateData stateData) {
+        Frame = frame;
+        StateData = stateData;
+    }
+}

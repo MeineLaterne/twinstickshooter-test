@@ -11,7 +11,7 @@ public class BulletController : MonoBehaviour {
 
     public BulletStateData GetNextFrameData(BulletStateData currentState) {
         characterController.Move(Velocity * Time.fixedDeltaTime);
-        return new BulletStateData(currentState.Id, transform.position);
+        return new BulletStateData(currentState.Id, currentState.PlayerId, transform.position);
     }
 
     private void Awake() {

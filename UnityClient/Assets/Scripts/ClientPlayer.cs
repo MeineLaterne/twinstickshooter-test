@@ -5,14 +5,14 @@ using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(PlayerController))]
-[RequireComponent(typeof(PlayerInterpolation))]
+//[RequireComponent(typeof(PlayerInterpolation))]
 [RequireComponent(typeof(IInputReader))]
 public class ClientPlayer : MonoBehaviour {
 
     [SerializeField] private int shotInterval = 8;
 
     private PlayerController playerController;
-    private PlayerInterpolation interpolation;
+    private StateInterpolation<PlayerStateData> interpolation;
     private IInputReader inputReader;
 
     private ushort id;
@@ -28,6 +28,8 @@ public class ClientPlayer : MonoBehaviour {
     public void Initialize(ushort id, string playerName) {
         this.id = id;
         this.playerName = playerName;
+
+        interpolation = new StateInterpolation<PlayerStateData>(Interpolate);
 
         if (this.id == ConnectionManager.Instance.PlayerID) {
             isLocalPlayer = true;
@@ -68,8 +70,18 @@ public class ClientPlayer : MonoBehaviour {
 
     private void Awake() {
         playerController = GetComponent<PlayerController>();
-        interpolation = GetComponent<PlayerInterpolation>();
         inputReader = GetComponent<IInputReader>();
+
+        //interpolation = new StateInterpolation<PlayerStateData>(Interpolate);
+    }
+
+    private void Interpolate(PlayerStateData prev, PlayerStateData curr, float t) {
+        transform.position = Vector3.LerpUnclamped(prev.Position, curr.Position, t);
+        transform.rotation = Quaternion.SlerpUnclamped(prev.Rotation, curr.Rotation, t);
+    }
+
+    private void Update() {
+        interpolation.Interpolate();
     }
 
     private void FixedUpdate() {
