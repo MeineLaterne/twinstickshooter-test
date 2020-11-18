@@ -9,8 +9,7 @@ using UnityEngine;
 [RequireComponent(typeof(IInputReader))]
 public class ClientPlayer : MonoBehaviour {
 
-    [SerializeField] private TMPro.TextMeshProUGUI nameText;
-    [SerializeField] private GameObject shotPrefab;
+    [SerializeField] private int shotInterval = 8;
 
     private PlayerController playerController;
     private PlayerInterpolation interpolation;
@@ -21,14 +20,14 @@ public class ClientPlayer : MonoBehaviour {
     private bool shotLock;
     private string playerName;
 
+    private int shotLockCounter = 0;
+
     // speichert unsere vorhergesagten Informationen zu player state und input
     private readonly Queue<ReconciliationInfo> history = new Queue<ReconciliationInfo>();
 
     public void Initialize(ushort id, string playerName) {
         this.id = id;
         this.playerName = playerName;
-
-        nameText.text = this.playerName;
 
         if (this.id == ConnectionManager.Instance.PlayerID) {
             isLocalPlayer = true;
@@ -62,7 +61,6 @@ public class ClientPlayer : MonoBehaviour {
                     }
                 }
             }
-
         } else {
             interpolation.PushStateData(playerState);
         }
@@ -76,50 +74,57 @@ public class ClientPlayer : MonoBehaviour {
 
     private void FixedUpdate() {
 
-        if (isLocalPlayer) {
-            var inputData = inputReader.ReadInput(0);
+        if (!isLocalPlayer) return;
 
-            if (inputData.Inputs[0]) {
-                if (!shotLock) {
-                    Shoot();
-                    shotLock = true;
-                    StartCoroutine(ShotLockRoutine(0.1f));
-                }
+        var inputData = inputReader.ReadInput();
+
+        if (inputData.Inputs[0]) {
+
+            //if (shotLock) {
+            //    shotLockCounter++;
+            //    if (shotLockCounter == shotInterval) {
+            //        shotLockCounter = 0;
+            //        shotLock = false;
+            //    }
+            //}
+
+            if (!shotLock) {
+                shotLock = true;
+                Shoot();
             }
-
-            // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
-            transform.position = interpolation.CurrentStateData.Position;
-
-            // dann holen wir uns die Daten für den nächsten Frame
-            var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
-
-            // dann starten wir die Interpolation
-            interpolation.PushStateData(nextStateData);
-
-            // ...senden den input an den Server
-            using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {
-                ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
-            }
-
-            // außerdem cachen wir unsere vorhergesagten Informationen
-            history.Enqueue(new ReconciliationInfo(GameManager.Instance.ClientTick, nextStateData, inputData));
+        } else {
+            shotLock = false;
         }
-    }
 
-    private void OnDestroy() {
-        StopAllCoroutines();
+        // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
+        transform.position = interpolation.CurrentStateData.Position;
+
+        // dann holen wir uns die Daten für den nächsten Frame
+        var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
+
+        // dann starten wir die Interpolation
+        interpolation.PushStateData(nextStateData);
+
+        // ...senden den input an den Server
+        using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {
+            ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
+        }
+
+        // außerdem cachen wir unsere vorhergesagten Informationen
+        history.Enqueue(new ReconciliationInfo(GameManager.Instance.ClientTick, nextStateData, inputData));
     }
 
     private void Shoot() {
-        var shot = Instantiate(shotPrefab);
+        var shot = GameObjectPool.Instance.Obtain(true);
         var shotVelocity = transform.forward * 100f;
         shot.transform.position = interpolation.CurrentStateData.Position;
         shot.GetComponent<Rigidbody>().AddForce(shotVelocity, ForceMode.VelocityChange);
-        Destroy(shot, 1.5f);
+        StartCoroutine(FreeShotRoutine(shot, 1.5f));
     }
 
-    private IEnumerator ShotLockRoutine(float lockDuration) {
-        yield return new WaitForSeconds(lockDuration);
-        shotLock = false;
+    private IEnumerator FreeShotRoutine(GameObject shot, float delay) {
+        yield return new WaitForSeconds(delay);
+        GameObjectPool.Instance.Free(shot);
     }
+
 }

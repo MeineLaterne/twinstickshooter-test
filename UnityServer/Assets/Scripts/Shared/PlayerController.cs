@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour {
 
     public PlayerStateData GetNextFrameData(PlayerInputData inputData, PlayerStateData currentStateData) {
         
-        var fireButtonDown = inputData.Inputs[0];
+        //var fireButtonDown = inputData.Inputs[0];
         var applyRotation = inputData.Inputs[1];
 
         var movement = new Vector3(inputData.MovementAxes.x, 0, inputData.MovementAxes.y) * movementSpeed * Time.fixedDeltaTime;

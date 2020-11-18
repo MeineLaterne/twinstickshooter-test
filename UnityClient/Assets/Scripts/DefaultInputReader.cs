@@ -4,7 +4,7 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
 {
     [SerializeField] private float stickDeadzone = 0.2f;
 
-    public PlayerInputData ReadInput(uint time) {
+    public PlayerInputData ReadInput() {
         
         var movementAxes = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         // die Rotation hier ist etwas komisch. Wir müssen die Achsen vertauschen weil der Spieler
@@ -15,7 +15,7 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
         inputs[0] = Input.GetMouseButton(0);
         inputs[1] = Mathf.Abs(rotationAxes.x) > stickDeadzone || Mathf.Abs(rotationAxes.y) > stickDeadzone;
 
-        return new PlayerInputData(inputs, movementAxes, rotationAxes, time);
+        return new PlayerInputData(inputs, movementAxes, rotationAxes, GameManager.Instance.LastServerTick - 1);
     }
 
 }

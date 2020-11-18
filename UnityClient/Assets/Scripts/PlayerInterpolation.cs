@@ -9,7 +9,7 @@ public class PlayerInterpolation : MonoBehaviour {
     
     public void PushStateData(PlayerStateData data) => Refresh(data, CurrentStateData);
 
-    public void Refresh(PlayerStateData currentStateData, PlayerStateData previousStateData) {
+    private void Refresh(PlayerStateData currentStateData, PlayerStateData previousStateData) {
         CurrentStateData = currentStateData;
         PreviousStateData = previousStateData;
         lastInputTime = Time.fixedTime;

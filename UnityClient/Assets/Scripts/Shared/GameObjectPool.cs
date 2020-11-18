@@ -3,28 +3,26 @@ using UnityEngine;
 
 public class GameObjectPool : MonoBehaviour {
     
-    public GameObjectPool Instance { get; private set; }
+    public static GameObjectPool Instance { get; private set; }
 
     [SerializeField] private bool dontDestroyOnLoad;
     [SerializeField] private bool autoExpand;
-    [SerializeField] private bool activateOnObtain;
     [SerializeField] private int poolSize;
     [SerializeField] private GameObject objectToPool;
 
     private readonly List<GameObject> pool = new List<GameObject>();
     
-    public GameObject Obtain() {
+    public GameObject Obtain(bool active = false) {
         foreach (var go in pool) {
             if (!go.activeInHierarchy) {
-                if (activateOnObtain) go.SetActive(true);
+                go.SetActive(active);
                 return go;
             }
-                
         }
 
         if (autoExpand) {
             var go = Instantiate(objectToPool);
-            if(!activateOnObtain) go.SetActive(false);
+            go.SetActive(active);
             pool.Add(go);
             return go;
         }

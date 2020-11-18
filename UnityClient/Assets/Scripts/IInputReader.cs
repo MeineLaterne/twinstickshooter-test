@@ -1,3 +1,3 @@
 ﻿public interface IInputReader {
-    PlayerInputData ReadInput(uint time);
+    PlayerInputData ReadInput();
 }

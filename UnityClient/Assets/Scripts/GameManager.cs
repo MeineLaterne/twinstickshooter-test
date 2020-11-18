@@ -50,7 +50,12 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    private void OnGameStart(GameStartData startData) { }
+    private void OnGameStart(GameStartData startData) {
+        LastServerTick = ClientTick = startData.ServerTick;
+        foreach (var spawnData in startData.Players) {
+            SpawnPlayer(spawnData);
+        }
+    }
 
     private void OnGameUpdate(GameUpdateData updateData) => buffer.Add(updateData);
 
