@@ -27,7 +27,25 @@ public class ClientBullet : MonoBehaviour {
 
     public void UpdateBulletState(BulletStateData stateData) {
         if (isLocal) {
-            // .. reconciliation
+
+            //while (history.Count != 0 && history.Peek().Frame < GameManager.Instance.LastServerTick) {
+            //    history.Dequeue();
+            //}
+
+            //if (history.Count != 0 && history.Peek().Frame == GameManager.Instance.LastServerTick) {
+            //    var ri = history.Dequeue();
+            //    if (Vector3.Distance(ri.StateData.Position, stateData.Position) > 0.05f) {
+            //        interpolation.CurrentStateData = stateData;
+            //        transform.position = stateData.Position;
+
+            //        var infos = history.ToArray();
+            //        foreach (var info in infos) {
+            //            var sd = bulletController.GetNextFrameData(info.StateData);
+            //            interpolation.PushStateData(sd);
+            //        }
+            //    }
+            //}
+
         } else {
             interpolation.PushStateData(stateData);
         }
@@ -50,6 +68,8 @@ public class ClientBullet : MonoBehaviour {
         var nextState = bulletController.GetNextFrameData(interpolation.CurrentStateData);
 
         interpolation.PushStateData(nextState);
+
+        //history.Enqueue(new BulletReconciliationInfo(GameManager.Instance.ClientTick, nextState));
     }
 
     private void Interpolate(BulletStateData previous, BulletStateData current, float t) {

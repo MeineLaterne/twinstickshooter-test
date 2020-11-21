@@ -3,6 +3,7 @@ using DarkRift.Client;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(GameObjectPool))]
 public class GameManager : MonoBehaviour {
     
     public static GameManager Instance { get; private set; }
@@ -12,7 +13,11 @@ public class GameManager : MonoBehaviour {
 
     [SerializeField] private GameObject[] playerPrefabs;
 
+    private GameObjectPool bulletPool;
+
     private readonly Dictionary<ushort, ClientPlayer> players = new Dictionary<ushort, ClientPlayer>();
+    private readonly Dictionary<ushort, ClientBullet> activeBullets = new Dictionary<ushort, ClientBullet>();
+
     private readonly QueueBuffer<GameUpdateData> buffer = new QueueBuffer<GameUpdateData>(1);
 
     private void Awake() {
@@ -22,6 +27,9 @@ public class GameManager : MonoBehaviour {
         }
 
         Instance = this;
+
+        bulletPool = GetComponent<GameObjectPool>();
+
         DontDestroyOnLoad(gameObject);
     }
 
@@ -89,6 +97,20 @@ public class GameManager : MonoBehaviour {
             }
         }
 
+        foreach (var bulletSpawnData in updateData.BulletSpawns) {
+            SpawnBullet(bulletSpawnData);
+        }
+
+        foreach (var bulletDespawnData in updateData.BulletDespawns) {
+            DespawnBullet(bulletDespawnData.Id);
+        }
+
+        foreach (var bulletState in updateData.BulletStates) {
+            if (activeBullets.TryGetValue(bulletState.Id, out ClientBullet b)) {
+                b.UpdateBulletState(bulletState);
+            }
+        }
+
     }
 
     private void SpawnPlayer(PlayerSpawnData spawnData) {
@@ -96,6 +118,22 @@ public class GameManager : MonoBehaviour {
         var player = go.GetComponent<ClientPlayer>();
         player.Initialize(spawnData.Id, spawnData.Name);
         players.Add(spawnData.Id, player);
+    }
+
+    private void SpawnBullet(BulletSpawnData spawnData) {
+        var go = bulletPool.Obtain(true);
+        var bullet = go.GetComponent<ClientBullet>();
+        bullet.Initialize(spawnData);
+        activeBullets.Add(spawnData.Id, bullet);
+        Debug.Log($"spawning bullet: {spawnData.Id} at {spawnData.Position}");
+    }
+
+    private void DespawnBullet(ushort bulletId) {
+        if (activeBullets.TryGetValue(bulletId, out ClientBullet bullet)) {
+            bulletPool.Free(bullet.gameObject);
+            activeBullets.Remove(bulletId);
+            Debug.Log($"despawning bullet: {bulletId}");
+        }
     }
 
 }

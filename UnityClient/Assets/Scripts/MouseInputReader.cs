@@ -6,11 +6,10 @@ class MouseInputReader : MonoBehaviour, IInputReader {
         var rawDirection = cursorPosition - transform.position;
         var rotationAxes = new Vector2(rawDirection.x, rawDirection.z);
         var movementAxes = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        var inputs = new bool[] {
-            Input.GetMouseButton(0),
-            Input.GetMouseButton(1)
-        };
-
+        var inputs = new bool[2];
+        inputs[0] = Input.GetMouseButton(0);
+        inputs[1] = Input.GetMouseButton(1);
+        
         rotationAxes.Normalize();
 
         return new PlayerInputData(inputs, movementAxes, rotationAxes, GameManager.Instance.LastServerTick - 1);

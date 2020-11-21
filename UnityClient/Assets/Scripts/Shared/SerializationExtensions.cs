@@ -6,7 +6,7 @@ public static class SerializationExtensions {
         for (int i = 0; i < bools.Length; i += 8) {
             int temp = 0;
             for (int j = 0; j < 8; j++) {
-                temp += (bools[i + j] ? 1 : 0) << j;
+                if (i+j < bools.Length) temp += (bools[i + j] ? 1 : 0) << j;
             }
             writer.Write((byte)temp);
         }

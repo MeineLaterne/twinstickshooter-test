@@ -3,19 +3,21 @@ using UnityEngine;
 
 public class GameObjectPool : MonoBehaviour {
     
-    public static GameObjectPool Instance { get; private set; }
+    public int LastObtainedIndex { get; private set; }
 
-    [SerializeField] private bool dontDestroyOnLoad;
     [SerializeField] private bool autoExpand;
     [SerializeField] private int poolSize;
     [SerializeField] private GameObject objectToPool;
+    [SerializeField] private Transform parentTransform;
 
     private readonly List<GameObject> pool = new List<GameObject>();
     
     public GameObject Obtain(bool active = false) {
-        foreach (var go in pool) {
+        for (var i = 0; i < pool.Count; i++) {
+            var go = pool[i];
             if (!go.activeInHierarchy) {
                 go.SetActive(active);
+                LastObtainedIndex = i;
                 return go;
             }
         }
@@ -24,6 +26,7 @@ public class GameObjectPool : MonoBehaviour {
             var go = Instantiate(objectToPool);
             go.SetActive(active);
             pool.Add(go);
+            LastObtainedIndex = pool.Count - 1;
             return go;
         }
 
@@ -33,20 +36,11 @@ public class GameObjectPool : MonoBehaviour {
     public void Free(GameObject pooledGameObject) => pooledGameObject.SetActive(false);
 
     private void Awake() {
-        if (Instance != null) {
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-
-        if (dontDestroyOnLoad)
-            DontDestroyOnLoad(gameObject);
-    }
-
-    private void Start() {
         for (int i = 0; i < poolSize; i++) {
-            var go = Instantiate(objectToPool);
+            var go = parentTransform == null ? 
+                     Instantiate(objectToPool) : 
+                     Instantiate(objectToPool, parentTransform);
+            
             go.SetActive(false);
             pool.Add(go);
         }

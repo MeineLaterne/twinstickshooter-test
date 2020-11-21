@@ -21,6 +21,6 @@ public class PlayerController : MonoBehaviour {
         
         CharacterController.Move(movement);
 
-        return new PlayerStateData(currentStateData.Id, transform.position, rotation);
+        return new PlayerStateData(currentStateData.Id, transform.localPosition, rotation);
     }
 }
