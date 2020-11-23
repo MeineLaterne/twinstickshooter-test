@@ -111,17 +111,4 @@ public class ClientPlayer : MonoBehaviour {
         history.Enqueue(new ReconciliationInfo(GameManager.Instance.ClientTick, nextStateData, inputData));
     }
 
-    //private void Shoot() {
-    //    var shot = GameObjectPool.Instance.Obtain(true);
-    //    var shotVelocity = transform.forward * 100f;
-    //    shot.transform.position = interpolation.CurrentStateData.Position;
-    //    shot.GetComponent<Rigidbody>().AddForce(shotVelocity, ForceMode.VelocityChange);
-    //    StartCoroutine(FreeShotRoutine(shot, 1.5f));
-    //}
-
-    //private IEnumerator FreeShotRoutine(GameObject shot, float delay) {
-    //    yield return new WaitForSeconds(delay);
-    //    GameObjectPool.Instance.Free(shot);
-    //}
-
 }

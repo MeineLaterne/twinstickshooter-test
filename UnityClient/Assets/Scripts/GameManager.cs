@@ -48,9 +48,11 @@ public class GameManager : MonoBehaviour {
     private void OnMessage(object sender, MessageReceivedEventArgs e) {
         using (var msg = e.GetMessage()) {
             switch ((MessageTag)msg.Tag) {
+                
                 case MessageTag.StartGameResponse:
                     OnGameStart(msg.Deserialize<GameStartData>());
                     break;
+                
                 case MessageTag.GameUpdate:
                     OnGameUpdate(msg.Deserialize<GameUpdateData>());
                     break;
@@ -129,7 +131,7 @@ public class GameManager : MonoBehaviour {
         var bullet = go.GetComponent<ClientBullet>();
         bullet.Initialize(spawnData);
         activeBullets.Add(spawnData.Id, bullet);
-        Debug.Log($"spawning bullet: {spawnData.Id} at {spawnData.Position}");
+        Debug.Log($"spawning bullet: {bullet.Id} at {go.transform.position}");
     }
 
     private void DespawnBullet(ushort bulletId) {

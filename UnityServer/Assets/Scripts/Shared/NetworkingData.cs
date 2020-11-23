@@ -14,6 +14,7 @@ public enum MessageTag : ushort {
     GameUpdate = 201,
     StartGameRequest = 202,
     StartGameResponse = 203,
+    BulletUpdate = 205,
 }
 
 public struct LoginRequestData : IDarkRiftSerializable {
@@ -216,7 +217,6 @@ public struct GameUpdateData : IDarkRiftSerializable {
     public PlayerStateData[] PlayerStates;
     public PlayerSpawnData[] SpawnData;
     public PlayerDespawnData[] DespawnData;
-
     public BulletStateData[] BulletStates;
     public BulletSpawnData[] BulletSpawns;
     public BulletDespawnData[] BulletDespawns;
@@ -286,9 +286,9 @@ public struct BulletStateData : IDarkRiftSerializable {
     public ushort PlayerId;
     public Vector3 Position;
 
-    public BulletStateData(ushort id, ushort clientId, Vector3 position) {
+    public BulletStateData(ushort id, ushort playerId, Vector3 position) {
         Id = id;
-        PlayerId = clientId;
+        PlayerId = playerId;
         Position = position;
     }
 
@@ -355,5 +355,21 @@ public struct BulletDespawnData : IDarkRiftSerializable {
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Id);
+    }
+}
+
+public struct BulletUpdateData : IDarkRiftSerializable {
+    public BulletStateData[] BulletStates;
+
+    public BulletUpdateData(BulletStateData[] bulletStates) {
+        BulletStates = bulletStates;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        BulletStates = e.Reader.ReadSerializables<BulletStateData>();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(BulletStates);
     }
 }

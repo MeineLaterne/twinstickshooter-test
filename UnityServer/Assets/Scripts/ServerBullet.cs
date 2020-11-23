@@ -26,6 +26,7 @@ public class ServerBullet : MonoBehaviour {
 
     public BulletStateData BulletUpdate() {
         BulletState = bulletController.GetNextFrameData(BulletState);
+        transform.localPosition = BulletState.Position;
         return BulletState;
     }
 

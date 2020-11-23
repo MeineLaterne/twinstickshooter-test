@@ -28,9 +28,11 @@ public class Room : MonoBehaviour {
     private readonly List<PlayerDespawnData> playerDespawns = new List<PlayerDespawnData>();
 
     private readonly List<ServerBullet> serverBullets = new List<ServerBullet>();
-    private readonly List<BulletStateData> bulletStates = new List<BulletStateData>();
+    private readonly Dictionary<ushort, BulletStateData> bulletStates = new Dictionary<ushort, BulletStateData>();
     private readonly List<BulletSpawnData> bulletSpawns = new List<BulletSpawnData>();
     private readonly List<BulletDespawnData> bulletDespawns = new List<BulletDespawnData>();
+
+    private int cntr;
 
     public void Initialize(string roomName, byte slots) {
         this.roomName = roomName;
@@ -81,34 +83,6 @@ public class Room : MonoBehaviour {
         Destroy(clientConnection.ServerPlayer.gameObject);
     }
 
-    public void SpawnBullet(uint frame, ServerPlayer shooter) {
-        // -1 weil wir schon hochgetickt haben
-        var frameDiff = (int)(ServerTick - 1 - frame);
-
-        Vector3 spawnPosition;
-        Vector3 direction;
-
-        if (frameDiff < shooter.GunPointHistory.Count) {
-            spawnPosition = shooter.GunPointHistory[frameDiff].Position;
-            direction = shooter.GunPointHistory[frameDiff].Direction;
-        } else {
-            spawnPosition = shooter.GunPointState.Position;
-            direction = shooter.GunPointState.Direction;
-        }
-
-        var bullet = BulletPool.Obtain(true);
-        var serverBullet = bullet.GetComponent<ServerBullet>();
-        var spawnData = new BulletSpawnData((ushort)BulletPool.LastObtainedIndex, shooter.PlayerState.Id, spawnPosition, direction * serverBullet.Speed);
-
-        serverBullet.Initialize(shooter, spawnData);
-
-        serverBullets.Add(serverBullet);
-        bulletStates.Add(serverBullet.BulletState);
-        bulletSpawns.Add(spawnData);
-
-        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position}");
-    }
-
     public void SpawnBullet(ServerPlayer shooter) {
         var spawnPosition = shooter.GunPointState.Position;
         var direction = shooter.GunPointState.Direction;
@@ -119,15 +93,17 @@ public class Room : MonoBehaviour {
         serverBullet.Initialize(shooter, spawnData);
 
         serverBullets.Add(serverBullet);
-        bulletStates.Add(serverBullet.BulletState);
+        bulletStates[serverBullet.Id] = serverBullet.BulletState;
         bulletSpawns.Add(spawnData);
 
-        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position}");
+        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} velocity {direction * serverBullet.Speed}");
     }
 
     public void DespawnBullet(ServerBullet bullet) {
+        var idx = serverBullets.IndexOf(bullet);
         BulletPool.Free(bullet.gameObject);
-        serverBullets.Remove(bullet);
+        serverBullets.RemoveAt(idx);
+        bulletStates.Remove(bullet.Id);
         bulletDespawns.Add(new BulletDespawnData(bullet.Id));
     }
 
@@ -168,7 +144,7 @@ public class Room : MonoBehaviour {
         // bullet states updaten
         for (int i = 0; i < serverBullets.Count; i++) {
             var b = serverBullets[i];
-            bulletStates[i] = b.BulletUpdate();
+            bulletStates[b.Id] = b.BulletUpdate();
         }
 
         // updates an alle clients schicken
@@ -176,7 +152,9 @@ public class Room : MonoBehaviour {
         var spawnDataUpdates = playerSpawns.ToArray();
         var despawnDataUpdates = playerDespawns.ToArray();
 
-        var bulletStateUpdates = bulletStates.ToArray();
+        var bulletStateUpdates = new BulletStateData[bulletStates.Count];
+        bulletStates.Values.CopyTo(bulletStateUpdates, 0);
+
         var bulletSpawnUpdates = bulletSpawns.ToArray();
         var bulletDespawnUpdates = bulletDespawns.ToArray();
 
@@ -191,6 +169,7 @@ public class Room : MonoBehaviour {
             using (var msg = Message.Create((ushort)MessageTag.GameUpdate, updateData)) {
                 p.Client.SendMessage(msg, SendMode.Reliable);
             }
+
         }
 
         // spawnlisten clearen, damit nichts doppelt gespawnt wird
