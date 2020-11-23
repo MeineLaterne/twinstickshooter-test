@@ -109,6 +109,22 @@ public class Room : MonoBehaviour {
         Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position}");
     }
 
+    public void SpawnBullet(ServerPlayer shooter) {
+        var spawnPosition = shooter.GunPointState.Position;
+        var direction = shooter.GunPointState.Direction;
+        var bullet = BulletPool.Obtain(true);
+        var serverBullet = bullet.GetComponent<ServerBullet>();
+        var spawnData = new BulletSpawnData((ushort)BulletPool.LastObtainedIndex, shooter.PlayerState.Id, spawnPosition, direction * serverBullet.Speed);
+
+        serverBullet.Initialize(shooter, spawnData);
+
+        serverBullets.Add(serverBullet);
+        bulletStates.Add(serverBullet.BulletState);
+        bulletSpawns.Add(spawnData);
+
+        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position}");
+    }
+
     public void DespawnBullet(ServerBullet bullet) {
         BulletPool.Free(bullet.gameObject);
         serverBullets.Remove(bullet);
@@ -177,7 +193,7 @@ public class Room : MonoBehaviour {
             }
         }
 
-        // spawnlisten clearen, damit nichts doppelt despawnt wird
+        // spawnlisten clearen, damit nichts doppelt gespawnt wird
         playerSpawns.Clear();
         playerDespawns.Clear();
 

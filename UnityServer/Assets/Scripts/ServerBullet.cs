@@ -19,7 +19,7 @@ public class ServerBullet : MonoBehaviour {
         PlayerId = spawnData.PlayerId;
         BulletState = new BulletStateData(Id, PlayerId, spawnData.Position);
         Owner = owner;
-        transform.position = spawnData.Position;
+        transform.localPosition = spawnData.Position;
         bulletController.Velocity = spawnData.Velocity;
         GetComponent<CharacterController>().enabled = true;
     }

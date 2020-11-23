@@ -26,7 +26,7 @@ public class ClientPlayer : MonoBehaviour {
 
         interpolation = new StateInterpolation<PlayerStateData>(Interpolate);
 
-        if (this.id == ConnectionManager.Instance.PlayerID) {
+        if (this.id == ConnectionManager.Instance.PlayerId) {
             isLocalPlayer = true;
             interpolation.CurrentStateData = new PlayerStateData(this.id, Vector3.zero, Quaternion.identity);
         }
@@ -92,6 +92,15 @@ public class ClientPlayer : MonoBehaviour {
 
         // dann starten wir die Interpolation
         interpolation.PushStateData(nextStateData);
+
+        if (inputData.Inputs[0]) {
+            if (!shotLock) {
+                Debug.Log($"sending shot input with time: {inputData.Time}");
+                shotLock = true;
+            }
+        } else {
+            shotLock = false;
+        }
 
         // ...senden den input an den Server
         using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {

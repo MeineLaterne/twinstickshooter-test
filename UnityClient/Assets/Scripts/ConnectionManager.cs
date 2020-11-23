@@ -7,7 +7,7 @@ using UnityEngine;
 public class ConnectionManager : MonoBehaviour {
     public static ConnectionManager Instance { get; private set; }
     public UnityClient Client { get; private set; }
-    public ushort PlayerID { get; set; }
+    public ushort PlayerId { get; set; }
     public LobbyData LobbyData { get; set; }
 
     internal delegate void OnConnectedDelegate();
@@ -39,7 +39,6 @@ public class ConnectionManager : MonoBehaviour {
                 // nachdem man verbunden ist kann der login prozess starten
                 // siehe LoginManager.cs
                 OnConnected?.Invoke();
-                Debug.Log("connected to server");
                 break;
 
             default:

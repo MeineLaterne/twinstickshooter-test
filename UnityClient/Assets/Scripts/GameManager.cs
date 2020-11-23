@@ -59,7 +59,11 @@ public class GameManager : MonoBehaviour {
     }
 
     private void OnGameStart(GameStartData startData) {
-        LastServerTick = ClientTick = startData.ServerTick;
+        LastServerTick = startData.ServerTick;
+        ClientTick = startData.ServerTick;
+
+        Debug.Log($"starting game with ServerTick: {LastServerTick}");
+
         foreach (var spawnData in startData.Players) {
             SpawnPlayer(spawnData);
         }
@@ -79,7 +83,7 @@ public class GameManager : MonoBehaviour {
         LastServerTick = updateData.Frame;
 
         foreach (var spawnData in updateData.SpawnData) {
-            if (spawnData.Id != ConnectionManager.Instance.PlayerID) {
+            if (spawnData.Id != ConnectionManager.Instance.PlayerId) {
                 SpawnPlayer(spawnData);
             }
         }

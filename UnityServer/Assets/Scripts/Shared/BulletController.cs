@@ -5,13 +5,11 @@ public class BulletController : MonoBehaviour {
 
     public Vector3 Velocity { get; set; }
 
-    [SerializeField] private float speed = 40f;
-    
     private CharacterController characterController;
 
     public BulletStateData GetNextFrameData(BulletStateData currentState) {
         characterController.Move(Velocity * Time.fixedDeltaTime);
-        return new BulletStateData(currentState.Id, currentState.PlayerId, transform.position);
+        return new BulletStateData(currentState.Id, currentState.PlayerId, transform.localPosition);
     }
 
     private void Awake() {

@@ -39,7 +39,7 @@ public class LoginManager : MonoBehaviour {
     private void OnLoginAccepted(LoginResponseData data) {
         Debug.Log($"login successful! Got id: {data.ID}");
 
-        ConnectionManager.Instance.PlayerID = data.ID;
+        ConnectionManager.Instance.PlayerId = data.ID;
         ConnectionManager.Instance.LobbyData = data.LobbyData;
 
         SceneManager.LoadScene("Lobby", LoadSceneMode.Single);

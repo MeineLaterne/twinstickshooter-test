@@ -18,7 +18,7 @@ public class ServerPlayer : MonoBehaviour {
     [SerializeField] private Transform gunPoint;
 
     private ClientConnection clientConnection;
-    private readonly QueueBuffer<PlayerInputData> inputBuffer = new QueueBuffer<PlayerInputData>(1, 2);
+    private readonly QueueBuffer<PlayerInputData> inputBuffer = new QueueBuffer<PlayerInputData>(1, 1);
     private PlayerInputData[] inputsToProcess;
 
     private bool shotLock;
@@ -35,6 +35,7 @@ public class ServerPlayer : MonoBehaviour {
         PlayerState = new PlayerStateData(clientConnection.client.ID, position, Quaternion.identity);
         InputTick = clientConnection.Room.ServerTick;
 
+        Debug.Log($"init new player with InputTick: {InputTick}");
     }
 
     public void ReceiveInput(PlayerInputData inputData) => inputBuffer.Add(inputData);
@@ -42,16 +43,19 @@ public class ServerPlayer : MonoBehaviour {
     public void PlayerPreUpdate() {
         inputsToProcess = inputBuffer.Get();
 
-        foreach (var inputData in inputsToProcess) {
-            if (inputData.Inputs[0]) {
-                if (!shotLock) {
-                    shotLock = true;
-                    Room.SpawnBullet(inputData.Time, this);
-                }
-            } else {
-                shotLock = false;
-            }
-        }
+        //foreach (var inputData in inputsToProcess) {
+        //    if (inputData.Inputs[0]) {
+        //        if (!shotLock) {
+        //            Debug.Log($"calling SpawnBullet with: {inputData.Time}");
+        //            Debug.Log($"ServerTick: {Room.ServerTick} InputTick: {InputTick}");
+        //            shotLock = true;
+        //            Room.SpawnBullet(inputData.Time, this);
+        //            return;
+        //        }
+        //    } else {
+        //        shotLock = false;
+        //    }
+        //}
     }
 
     public PlayerStateData PlayerUpdate() {
@@ -69,10 +73,21 @@ public class ServerPlayer : MonoBehaviour {
             }
 
             PlayerState = PlayerController.GetNextFrameData(inputData, PlayerState);
+            
             GunPointState = new GunPointData {
                 Position = gunPoint.position,
                 Direction = transform.forward
             };
+
+            if (inputData.Inputs[0]) {
+                if (!shotLock) {
+                    shotLock = true;
+                    Debug.Log($"calling SpawnBullet with gunPoint.position: {gunPoint.position}");
+                    Room.SpawnBullet(this);
+                }
+            } else {
+                shotLock = false;
+            }
         }
 
         transform.localPosition = PlayerState.Position;
