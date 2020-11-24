@@ -32,8 +32,6 @@ public class Room : MonoBehaviour {
     private readonly List<BulletSpawnData> bulletSpawns = new List<BulletSpawnData>();
     private readonly List<BulletDespawnData> bulletDespawns = new List<BulletDespawnData>();
 
-    private int cntr;
-
     public void Initialize(string roomName, byte slots) {
         this.roomName = roomName;
         this.slots = slots;

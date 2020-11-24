@@ -112,20 +112,20 @@ public struct PlayerInputData : IDarkRiftSerializable {
     public bool[] Inputs;// 0 = leftClick, 1 = rightClick
     public Vector2 MovementAxes;
     public Vector2 RotationAxes;
-    public uint Time;
+    public uint Frame;
 
-    public PlayerInputData(bool[] inputs, Vector2 movementAxes, Vector2 rotationAxes, uint time) {
+    public PlayerInputData(bool[] inputs, Vector2 movementAxes, Vector2 rotationAxes, uint frame) {
         Inputs = inputs;
         MovementAxes = movementAxes;
         RotationAxes = rotationAxes;
-        Time = time;
+        Frame = frame;
     }
 
     public void Deserialize(DeserializeEvent e) {
         Inputs = e.Reader.ReadBooleans();
         MovementAxes = new Vector2(e.Reader.ReadSingle(), e.Reader.ReadSingle());
         RotationAxes = new Vector2(e.Reader.ReadSingle(), e.Reader.ReadSingle());
-        Time = e.Reader.ReadUInt16();
+        Frame = e.Reader.ReadUInt32();
     }
 
     public void Serialize(SerializeEvent e) {
@@ -134,7 +134,7 @@ public struct PlayerInputData : IDarkRiftSerializable {
         e.Writer.Write(MovementAxes.y);
         e.Writer.Write(RotationAxes.x);
         e.Writer.Write(RotationAxes.y);
-        e.Writer.Write(Time);
+        e.Writer.Write(Frame);
     }
 }
 

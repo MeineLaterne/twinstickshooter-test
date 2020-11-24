@@ -18,8 +18,10 @@ public class PlayerController : MonoBehaviour {
         var movement = new Vector3(inputData.MovementAxes.x, 0, inputData.MovementAxes.y) * movementSpeed * Time.fixedDeltaTime;
         var lookDirection = new Vector3(inputData.RotationAxes.x, 0, inputData.RotationAxes.y);
         var rotation = applyRotation ? Quaternion.LookRotation(lookDirection, Vector3.up) : transform.rotation;
-        
+
         CharacterController.Move(movement);
+
+        transform.localPosition = new Vector3(transform.localPosition.x, 0, transform.localPosition.z);
 
         return new PlayerStateData(currentStateData.Id, transform.localPosition, rotation);
     }

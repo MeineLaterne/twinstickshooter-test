@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(PlayerController))]
-//[RequireComponent(typeof(PlayerInterpolation))]
 [RequireComponent(typeof(IInputReader))]
 public class ClientPlayer : MonoBehaviour {
 
@@ -24,7 +23,7 @@ public class ClientPlayer : MonoBehaviour {
         this.id = id;
         this.playerName = playerName;
 
-        interpolation = new StateInterpolation<PlayerStateData>(Interpolate);
+        interpolation = new StateInterpolation<PlayerStateData>(new PlayerStateInterpolator());
 
         if (this.id == ConnectionManager.Instance.PlayerId) {
             isLocalPlayer = true;
@@ -43,20 +42,30 @@ public class ClientPlayer : MonoBehaviour {
             // dann schauen wir ob unsere vorhergesagten Daten sich krass von den Serverdaten unterscheiden
             if (history.Any() && history.Peek().Frame == GameManager.Instance.LastServerTick) {
                 var ri = history.Dequeue();
-                if (Vector3.Distance(ri.StateData.Position, playerState.Position) > 0.05f) {
+                if (Vector3.Distance(ri.StateData.Position, playerState.Position) > 0.1f) {
                     // wenn ja setzen wir den Spieler auf die Position, die der Server geschickt hat
                     interpolation.CurrentStateData = playerState;
                     transform.position = playerState.Position;
                     transform.rotation = playerState.Rotation;
-                    
+
                     // jetzt haben wir den Spieler an eine Position aus der Vergangenheit gesetzt
-                    // deshalb müssen alle gecachten ReconciliationInfos angewandt werden
-                    var infos = history.ToArray();
-                    for (int i = 0; i < infos.Length; i++) {
-                        var psd = playerController.GetNextFrameData(infos[i].InputData, interpolation.CurrentStateData);
+                    // deshalb müssen alle inputs, die noch nicht vom Server bearbeitet wurden, angewandt werden
+                    var infos = history.Where((element) => element.Frame > GameManager.Instance.LastServerTick);
+
+                    foreach (var info in infos) {
+                        var psd = playerController.GetNextFrameData(info.InputData, interpolation.CurrentStateData);
                         interpolation.PushStateData(psd);
                     }
-                    
+
+                    //for (int i = 0; i < infos.Count; i++) {
+                    //    Debug.Log($"frame > LastServerTick: {infos[i].Frame > GameManager.Instance.LastServerTick}");
+                    //    var psd = playerController.GetNextFrameData(infos[i].InputData, interpolation.CurrentStateData);
+                    //    interpolation.PushStateData(psd);
+                    //}
+
+                    transform.position = interpolation.CurrentStateData.Position;
+                    transform.rotation = interpolation.CurrentStateData.Rotation;
+
                 }
             }
         } else {
@@ -69,13 +78,8 @@ public class ClientPlayer : MonoBehaviour {
         inputReader = GetComponent<IInputReader>();
     }
 
-    private void Interpolate(PlayerStateData prev, PlayerStateData curr, float t) {
-        transform.position = Vector3.LerpUnclamped(prev.Position, curr.Position, t);
-        transform.rotation = Quaternion.SlerpUnclamped(prev.Rotation, curr.Rotation, t);
-    }
-
     private void Update() {
-        interpolation.Interpolate();
+        interpolation.Interpolate(transform);
     }
 
     private void FixedUpdate() {
@@ -95,7 +99,7 @@ public class ClientPlayer : MonoBehaviour {
 
         if (inputData.Inputs[0]) {
             if (!shotLock) {
-                Debug.Log($"sending shot input with time: {inputData.Time}");
+                Debug.Log($"sending shot input with time: {inputData.Frame}");
                 shotLock = true;
             }
         } else {
@@ -108,7 +112,7 @@ public class ClientPlayer : MonoBehaviour {
         }
 
         // außerdem cachen wir unsere vorhergesagten Informationen
-        history.Enqueue(new ReconciliationInfo(GameManager.Instance.ClientTick, nextStateData, inputData));
+        history.Enqueue(new ReconciliationInfo(inputData.Frame, nextStateData, inputData));
     }
 
 }

@@ -11,11 +11,11 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
         // standardmäßig in Richtung z schaut und nicht in Richtung x
         var rotationAxes = new Vector2(Input.GetAxis("RightStickY"), -Input.GetAxis("RightStickX"));//.Perpendicular();
         var inputs = new bool[2];
-        
-        inputs[0] = Input.GetMouseButton(0);
+
+        inputs[0] = Input.GetButton("Fire1");
         inputs[1] = Mathf.Abs(rotationAxes.x) > stickDeadzone || Mathf.Abs(rotationAxes.y) > stickDeadzone;
 
-        return new PlayerInputData(inputs, movementAxes, rotationAxes, GameManager.Instance.LastServerTick - 1);
+        return new PlayerInputData(inputs, movementAxes, rotationAxes, GameManager.Instance.LastServerTick + 1);
     }
 
 }
