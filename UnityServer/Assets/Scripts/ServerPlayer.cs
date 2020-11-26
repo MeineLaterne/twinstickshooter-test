@@ -18,7 +18,7 @@ public class ServerPlayer : MonoBehaviour {
     [SerializeField] private Transform gunPoint;
 
     private ClientConnection clientConnection;
-    private readonly QueueBuffer<PlayerInputData> inputBuffer = new QueueBuffer<PlayerInputData>(1, 1);
+    private readonly QueueBuffer<PlayerInputData> inputBuffer = new QueueBuffer<PlayerInputData>(1);
     private PlayerInputData[] inputsToProcess;
 
     private bool shotLock;

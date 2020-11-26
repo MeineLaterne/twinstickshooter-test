@@ -50,7 +50,7 @@ public class ClientPlayer : MonoBehaviour {
 
                     // jetzt haben wir den Spieler an eine Position aus der Vergangenheit gesetzt
                     // deshalb müssen alle inputs, die noch nicht vom Server bearbeitet wurden, angewandt werden
-                    var infos = history.Where((element) => element.Frame > GameManager.Instance.LastServerTick);
+                    var infos = history.Where(element => element.Frame > GameManager.Instance.LastServerTick);
 
                     foreach (var info in infos) {
                         var psd = playerController.GetNextFrameData(info.InputData, interpolation.CurrentStateData);
@@ -106,7 +106,7 @@ public class ClientPlayer : MonoBehaviour {
             shotLock = false;
         }
 
-        Debug.Log($"sending input {inputData.Frame}");
+        //Debug.Log($"sending input {inputData.Frame}");
 
         // ...senden den input an den Server
         using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {
