@@ -6,7 +6,7 @@
 /// <typeparam name="T"></typeparam>
 public class QueueBuffer<T> {
 
-    public static T[] Empty => new T[0];
+    public static readonly T[] Empty = new T[0];
 
     private readonly Queue<T> elements = new Queue<T>();
     private readonly int bufferSize;
