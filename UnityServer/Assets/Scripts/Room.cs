@@ -164,6 +164,8 @@ public class Room : MonoBehaviour {
                 bulletStateUpdates, bulletSpawnUpdates, bulletDespawnUpdates
             );
 
+            Debug.Log($"sending update: {updateData.Frame}");
+
             using (var msg = Message.Create((ushort)MessageTag.GameUpdate, updateData)) {
                 p.Client.SendMessage(msg, SendMode.Reliable);
             }

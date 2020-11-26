@@ -106,6 +106,8 @@ public class ClientPlayer : MonoBehaviour {
             shotLock = false;
         }
 
+        Debug.Log($"sending input {inputData.Frame}");
+
         // ...senden den input an den Server
         using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {
             ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
