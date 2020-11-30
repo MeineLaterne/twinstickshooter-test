@@ -29,7 +29,7 @@ public class QueueBuffer<T> {
     public void Add(T element) => elements.Enqueue(element);
 
     public T[] Get() {
-        if (elements.Count - 1 < bufferSize || elements.Count == bufferSize) {
+        if (elements.Count - 1 < bufferSize) {
             return Empty;
         }
 
@@ -42,44 +42,5 @@ public class QueueBuffer<T> {
 
         return r;
     }
-
-    //public T[] Get() {
-    //    var size = elements.Count - 1;
-
-    //    if (size == bufferSize) {
-    //        counter = 0;
-    //    }
-
-    //    if (size > bufferSize) {
-    //        if (counter < 0) {
-    //            counter = 0;
-    //        }
-    //        counter++;
-    //        if (counter > tolerance) {
-    //            var amount = elements.Count - bufferSize;
-    //            var r = new T[amount];
-    //            for (int i = 0; i < amount; i++) {
-    //                r[i] = elements.Dequeue();
-    //            }
-    //            return r;
-    //        }
-    //    }
-
-    //    if (size < bufferSize) {
-    //        if (counter > 0) {
-    //            counter = 0;
-    //        }
-    //        counter--;
-    //        if (-counter > tolerance) {
-    //            return Empty;
-    //        }
-    //    }
-
-    //    if (elements.Count > 0) {
-    //        return new T[] { elements.Dequeue() };
-    //    }
-
-    //    return Empty;
-    //}
 
 }

@@ -1,6 +1,5 @@
 ﻿using DarkRift;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(PlayerController))]
@@ -23,53 +22,49 @@ public class ClientPlayer : MonoBehaviour {
         this.id = id;
         this.playerName = playerName;
 
-        interpolation = new StateInterpolation<PlayerStateData>(new PlayerStateInterpolator());
+        interpolation = new StateInterpolation<PlayerStateData>(new PlayerStateInterpolator(transform));
 
         if (this.id == ConnectionManager.Instance.PlayerId) {
             isLocalPlayer = true;
-            interpolation.CurrentStateData = new PlayerStateData(this.id, Vector3.zero, Quaternion.identity);
+            interpolation.CurrentStateData = new PlayerStateData(this.id, 0, Vector3.zero, Quaternion.identity);
         }
     }
 
     public void UpdatePlayerState(PlayerStateData playerState) {
-        if (isLocalPlayer) {
-
-            // erstmal verwerfen wir alle Elemente deren Frame kleiner als der zuletzt erhaltene ServerTick ist aus unserer history
-            while (history.Any() && history.Peek().Frame < GameManager.Instance.LastServerTick) {
-                history.Dequeue();
-            }
-
-            // dann schauen wir ob unsere vorhergesagten Daten sich krass von den Serverdaten unterscheiden
-            if (history.Any() && history.Peek().Frame == GameManager.Instance.LastServerTick) {
-                var ri = history.Dequeue();
-                if (Vector3.Distance(ri.StateData.Position, playerState.Position) > 0.1f) {
-                    // wenn ja setzen wir den Spieler auf die Position, die der Server geschickt hat
-                    interpolation.CurrentStateData = playerState;
-                    transform.position = playerState.Position;
-                    transform.rotation = playerState.Rotation;
-
-                    // jetzt haben wir den Spieler an eine Position aus der Vergangenheit gesetzt
-                    // deshalb müssen alle inputs, die noch nicht vom Server bearbeitet wurden, angewandt werden
-                    var infos = history.Where(element => element.Frame > GameManager.Instance.LastServerTick);
-
-                    foreach (var info in infos) {
-                        var psd = playerController.GetNextFrameData(info.InputData, interpolation.CurrentStateData);
-                        interpolation.PushStateData(psd);
-                    }
-
-                    //for (int i = 0; i < infos.Count; i++) {
-                    //    Debug.Log($"frame > LastServerTick: {infos[i].Frame > GameManager.Instance.LastServerTick}");
-                    //    var psd = playerController.GetNextFrameData(infos[i].InputData, interpolation.CurrentStateData);
-                    //    interpolation.PushStateData(psd);
-                    //}
-
-                    transform.position = interpolation.CurrentStateData.Position;
-                    transform.rotation = interpolation.CurrentStateData.Rotation;
-
-                }
-            }
-        } else {
+        if (!isLocalPlayer) {
             interpolation.PushStateData(playerState);
+            return;
+        } 
+        
+        if (history.Count == 0)
+            return;
+
+        // erstmal verwerfen wir alle inputs die bereits vom server authorisiert wurden
+        while (history.Count > 0 && history.Peek().InputTick < playerState.InputTick) {
+            history.Dequeue();
+        }
+
+        if (history.Peek().InputTick != playerState.InputTick)
+            return;
+
+        var predictedState = history.Dequeue();
+
+        if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
+            return;
+
+        Debug.Log($"start reconciliation for frame {predictedState.InputTick} : {playerState.InputTick}");
+        // dann setzen wir den Spieler auf den letzten authorisierten Zustand
+        interpolation.CurrentStateData = playerState;
+        transform.position = playerState.Position;
+        transform.rotation = playerState.Rotation;
+
+        // dann wenden wir alle noch nicht authorisierten inputs wieder an
+        if (history.Count != 0) {
+            var reconciliationInfos = history.ToArray();
+            foreach (var ri in reconciliationInfos) {
+                var psd = playerController.GetNextFrameData(ri.InputData, interpolation.CurrentStateData);
+                interpolation.PushStateData(psd);
+            }
         }
     }
 
@@ -79,27 +74,30 @@ public class ClientPlayer : MonoBehaviour {
     }
 
     private void Update() {
-        interpolation.Interpolate(transform);
+        //interpolation.Interpolate();
     }
 
     private void FixedUpdate() {
-
+        //Debug.Log("FixedUpdate");
         if (!isLocalPlayer) return;
 
         var inputData = inputReader.ReadInput();
 
         // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
         transform.position = interpolation.CurrentStateData.Position;
-
+        transform.rotation = interpolation.CurrentStateData.Rotation;
         // dann holen wir uns die Daten für den nächsten Frame
         var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
 
         // dann starten wir die Interpolation
         interpolation.PushStateData(nextStateData);
 
+        transform.position = interpolation.CurrentStateData.Position;
+        transform.rotation = interpolation.CurrentStateData.Rotation;
+
         if (inputData.Inputs[0]) {
             if (!shotLock) {
-                Debug.Log($"sending shot input with time: {inputData.Frame}");
+                Debug.Log($"sending shot input with time: {inputData.InputTick}");
                 shotLock = true;
             }
         } else {
@@ -114,7 +112,7 @@ public class ClientPlayer : MonoBehaviour {
         }
 
         // außerdem cachen wir unsere vorhergesagten Informationen
-        history.Enqueue(new ReconciliationInfo(inputData.Frame, nextStateData, inputData));
+        history.Enqueue(new ReconciliationInfo(inputData.InputTick, nextStateData, inputData));
     }
 
 }

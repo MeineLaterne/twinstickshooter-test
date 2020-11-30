@@ -23,6 +23,6 @@ public class PlayerController : MonoBehaviour {
 
         transform.localPosition = new Vector3(transform.localPosition.x, 0, transform.localPosition.z);
 
-        return new PlayerStateData(currentStateData.Id, transform.localPosition, rotation);
+        return new PlayerStateData(currentStateData.Id, inputData.InputTick, transform.localPosition, rotation);
     }
 }

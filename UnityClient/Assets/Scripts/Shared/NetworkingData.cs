@@ -112,20 +112,20 @@ public struct PlayerInputData : IDarkRiftSerializable {
     public bool[] Inputs;// 0 = leftClick, 1 = rightClick
     public Vector2 MovementAxes;
     public Vector2 RotationAxes;
-    public uint Frame;
+    public uint InputTick;
 
-    public PlayerInputData(bool[] inputs, Vector2 movementAxes, Vector2 rotationAxes, uint frame) {
+    public PlayerInputData(bool[] inputs, Vector2 movementAxes, Vector2 rotationAxes, uint inputTick) {
         Inputs = inputs;
         MovementAxes = movementAxes;
         RotationAxes = rotationAxes;
-        Frame = frame;
+        InputTick = inputTick;
     }
 
     public void Deserialize(DeserializeEvent e) {
         Inputs = e.Reader.ReadBooleans();
         MovementAxes = new Vector2(e.Reader.ReadSingle(), e.Reader.ReadSingle());
         RotationAxes = new Vector2(e.Reader.ReadSingle(), e.Reader.ReadSingle());
-        Frame = e.Reader.ReadUInt32();
+        InputTick = e.Reader.ReadUInt32();
     }
 
     public void Serialize(SerializeEvent e) {
@@ -134,30 +134,34 @@ public struct PlayerInputData : IDarkRiftSerializable {
         e.Writer.Write(MovementAxes.y);
         e.Writer.Write(RotationAxes.x);
         e.Writer.Write(RotationAxes.y);
-        e.Writer.Write(Frame);
+        e.Writer.Write(InputTick);
     }
 }
 
 public struct PlayerStateData : IDarkRiftSerializable {
 
     public ushort Id;
+    public uint InputTick;
     public Vector3 Position;
     public Quaternion Rotation;
 
-    public PlayerStateData(ushort id, Vector3 position, Quaternion rotation) {
+    public PlayerStateData(ushort id, uint inputTick, Vector3 position, Quaternion rotation) {
         Id = id;
+        InputTick = inputTick;
         Position = position;
         Rotation = rotation;
     }
 
     public void Deserialize(DeserializeEvent e) {
         Id = e.Reader.ReadUInt16();
+        InputTick = e.Reader.ReadUInt32();
         Position = new Vector3(e.Reader.ReadSingle(), e.Reader.ReadSingle(), e.Reader.ReadSingle());
         Rotation = e.Reader.ReadQuaternion();
     }
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Id);
+        e.Writer.Write(InputTick);
         e.Writer.Write(Position.x);
         e.Writer.Write(Position.y);
         e.Writer.Write(Position.z);

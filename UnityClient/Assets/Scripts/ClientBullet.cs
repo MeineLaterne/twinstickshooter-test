@@ -22,14 +22,15 @@ public class ClientBullet : MonoBehaviour {
 
     public void UpdateBulletState(BulletStateData stateData) {
         interpolation.PushStateData(stateData);
+        transform.position = stateData.Position;
     }
 
     private void Awake() {
-        interpolation = new StateInterpolation<BulletStateData>(new BulletStateInterpolator());
+        interpolation = new StateInterpolation<BulletStateData>(new BulletStateInterpolator(transform));
     }
 
     private void Update() {
-        interpolation.Interpolate(transform);
+        //interpolation.Interpolate();
     }
 
 }

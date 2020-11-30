@@ -64,7 +64,7 @@ public class GameManager : MonoBehaviour {
         LastServerTick = startData.ServerTick;
         ClientTick = startData.ServerTick;
 
-        Debug.Log($"starting game with ServerTick: {LastServerTick}");
+        Debug.Log($"starting game with {startData.Players.Length} players");
 
         foreach (var spawnData in startData.Players) {
             SpawnPlayer(spawnData);
@@ -74,8 +74,10 @@ public class GameManager : MonoBehaviour {
     private void OnGameUpdate(GameUpdateData updateData) => buffer.Add(updateData);
 
     private void FixedUpdate() {
+        //Debug.Log($"GameManager:FixedUpdate {ClientTick}");
         ClientTick++;
         var dataToProcess = buffer.Get();
+        //Debug.Log($"processing {dataToProcess.Length} updates");
         foreach (var data in dataToProcess) {
             UpdateClientGameState(data);
         }

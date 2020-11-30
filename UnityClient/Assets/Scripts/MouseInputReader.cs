@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 
 class MouseInputReader : MonoBehaviour, IInputReader {
+    public uint InputTick { get; private set; }
+
     public PlayerInputData ReadInput() {
         var cursorPosition = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, Camera.main.transform.position.y));
         var rawDirection = cursorPosition - transform.position;
@@ -12,6 +14,6 @@ class MouseInputReader : MonoBehaviour, IInputReader {
         
         rotationAxes.Normalize();
 
-        return new PlayerInputData(inputs, movementAxes, rotationAxes, GameManager.Instance.LastServerTick - 1);
+        return new PlayerInputData(inputs, movementAxes, rotationAxes, InputTick++);
     }
 }

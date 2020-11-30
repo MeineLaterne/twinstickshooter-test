@@ -32,8 +32,8 @@ public class ServerPlayer : MonoBehaviour {
         this.clientConnection = clientConnection;
         this.clientConnection.ServerPlayer = this;
 
-        PlayerState = new PlayerStateData(clientConnection.client.ID, position, Quaternion.identity);
-        InputTick = clientConnection.Room.ServerTick;
+        PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
+        InputTick = 0;
 
         Debug.Log($"init new player with InputTick: {InputTick}");
     }
@@ -42,57 +42,13 @@ public class ServerPlayer : MonoBehaviour {
 
     public void PlayerPreUpdate() {
         inputsToProcess = inputBuffer.Get();
-
-        //foreach (var inputData in inputsToProcess) {
-        //    if (inputData.Inputs[0]) {
-        //        if (!shotLock) {
-        //            Debug.Log($"calling SpawnBullet with: {inputData.Time}");
-        //            Debug.Log($"ServerTick: {Room.ServerTick} InputTick: {InputTick}");
-        //            shotLock = true;
-        //            Room.SpawnBullet(inputData.Time, this);
-        //            return;
-        //        }
-        //    } else {
-        //        shotLock = false;
-        //    }
-        //}
     }
 
     public PlayerStateData PlayerUpdate() {
-        //if (inputsToProcess.Length != 0) {
-        //    var inputData = inputsToProcess[0];
-        //    InputTick = inputData.Frame;
-
-        //    for (int i = 1; i < inputsToProcess.Length; i++) {
-        //        InputTick = inputsToProcess[i].Frame;
-        //        for (int j = 0; j < inputData.Inputs.Length; j++) {
-        //            inputData.Inputs[j] = inputData.Inputs[j] || inputsToProcess[i].Inputs[j];
-        //        }
-        //        inputData.MovementAxes += inputsToProcess[i].MovementAxes;
-        //        inputData.RotationAxes = inputsToProcess[i].RotationAxes;
-        //    }
-
-        //    PlayerState = PlayerController.GetNextFrameData(inputData, PlayerState);
-
-        //    GunPointState = new GunPointData {
-        //        Position = gunPoint.position,
-        //        Direction = transform.forward
-        //    };
-
-        //    if (inputData.Inputs[0]) {
-        //        if (!shotLock) {
-        //            shotLock = true;
-        //            Debug.Log($"calling SpawnBullet with gunPoint.position: {gunPoint.position}");
-        //            Room.SpawnBullet(this);
-        //        }
-        //    } else {
-        //        shotLock = false;
-        //    }
-        //}
-
+        
         var shoot = false;
         foreach (var inputData in inputsToProcess) {
-            InputTick++;
+            InputTick = inputData.InputTick;
             shoot = shoot || inputData.Inputs[0];
             PlayerState = PlayerController.GetNextFrameData(inputData, PlayerState);
         }
@@ -105,25 +61,11 @@ public class ServerPlayer : MonoBehaviour {
             Direction = transform.forward
         };
 
-        if (shoot) {
-            if (!shotLock) {
-                shotLock = true;
-                Room.SpawnBullet(this);
-            }
+        if (shoot && !shotLock) {
+            shotLock = true;
+            Room.SpawnBullet(this);
         } else {
             shotLock = false;
-        }
-
-        History.Add(PlayerState);
-        
-        if (History.Count > 10) {
-            History.RemoveAt(0);
-        }
-
-        GunPointHistory.Add(GunPointState);
-
-        if (GunPointHistory.Count > 10) {
-            GunPointHistory.RemoveAt(0);
         }
 
         return PlayerState;
@@ -136,6 +78,10 @@ public class ServerPlayer : MonoBehaviour {
 
     private void Awake() {
         PlayerController = GetComponent<PlayerController>();
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit) {
+        transform.localPosition = PlayerState.Position;
     }
 
     private void OnDestroy() {

@@ -4,6 +4,8 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
 {
     [SerializeField] private float stickDeadzone = 0.2f;
 
+    public uint InputTick { get; private set; }
+
     public PlayerInputData ReadInput() {
         
         var movementAxes = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
@@ -15,7 +17,7 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
         inputs[0] = Input.GetButton("Fire1");
         inputs[1] = Mathf.Abs(rotationAxes.x) > stickDeadzone || Mathf.Abs(rotationAxes.y) > stickDeadzone;
 
-        return new PlayerInputData(inputs, movementAxes, rotationAxes, GameManager.Instance.LastServerTick + 1);
+        return new PlayerInputData(inputs, movementAxes, rotationAxes, InputTick++);
     }
 
 }
