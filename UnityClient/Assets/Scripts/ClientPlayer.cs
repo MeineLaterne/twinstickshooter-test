@@ -53,15 +53,14 @@ public class ClientPlayer : MonoBehaviour {
 
         var predictedState = history.Dequeue();
 
-        //if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
-        //    return;
+        if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
+            return;
 
         Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
         Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {playerState.Position}");
         // dann setzen wir den Spieler auf den letzten authorisierten Zustand
         interpolation.CurrentStateData = playerState;
-        transform.position = playerState.Position;
-        transform.rotation = playerState.Rotation;
+        playerController.ResetTo(playerState);
 
         // dann wenden wir alle noch nicht authorisierten inputs wieder an
         if (history.Count != 0) {
@@ -69,6 +68,7 @@ public class ClientPlayer : MonoBehaviour {
             var reconciliationInfos = history.ToArray();
             foreach (var ri in reconciliationInfos) {
                 Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
+                playerController.ResetTo(interpolation.CurrentStateData);
                 var psd = playerController.GetNextFrameData(ri.InputData, interpolation.CurrentStateData);
                 interpolation.PushStateData(psd);
                 Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
@@ -82,7 +82,7 @@ public class ClientPlayer : MonoBehaviour {
     }
 
     private void Update() {
-        //interpolation.Interpolate();
+        interpolation.Interpolate();
     }
 
     private void FixedUpdate() {
@@ -91,19 +91,14 @@ public class ClientPlayer : MonoBehaviour {
 
         var inputData = inputReader.ReadInput();
 
-        // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
-        transform.position = interpolation.CurrentStateData.Position;
-        transform.rotation = interpolation.CurrentStateData.Rotation;
+        // erst wird der Spieler auf den letzten Zustand zurückgesetzt
+        playerController.ResetTo(interpolation.CurrentStateData);
         
         // dann holen wir uns die Daten für den nächsten Frame
         var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
 
         // dann starten wir die Interpolation
         interpolation.PushStateData(nextStateData);
-
-        // das ist jetzt nur zu Testzwecken hier
-        //transform.position = interpolation.CurrentStateData.Position;
-        //transform.rotation = interpolation.CurrentStateData.Rotation;
 
         if (inputData.Inputs[0]) {
             if (!shotLock) {
@@ -117,7 +112,7 @@ public class ClientPlayer : MonoBehaviour {
             shotLock = false;
         }
 
-        Debug.Log($"sending input {inputData.InputTick}: {inputData.MovementAxes} => {nextStateData.Position}");
+        //Debug.Log($"sending input {inputData.InputTick}: {inputData.MovementAxes} => {nextStateData.Position}");
 
         // ...senden den input an den Server
         using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {
