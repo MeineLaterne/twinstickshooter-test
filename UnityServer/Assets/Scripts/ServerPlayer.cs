@@ -32,10 +32,12 @@ public class ServerPlayer : MonoBehaviour {
         this.clientConnection = clientConnection;
         this.clientConnection.ServerPlayer = this;
 
-        PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
         InputTick = 0;
+        
+        PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
+        
+        
 
-        Debug.Log($"init new player with InputTick: {InputTick}");
     }
 
     public void ReceiveInput(PlayerInputData inputData) => inputBuffer.Add(inputData);
@@ -60,13 +62,6 @@ public class ServerPlayer : MonoBehaviour {
             Position = gunPoint.position,
             Direction = transform.forward
         };
-
-        if (shoot && !shotLock) {
-            shotLock = true;
-            Room.SpawnBullet(this);
-        } else {
-            shotLock = false;
-        }
 
         return PlayerState;
     }

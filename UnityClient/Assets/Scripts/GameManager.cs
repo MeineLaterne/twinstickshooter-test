@@ -18,6 +18,7 @@ public class GameManager : MonoBehaviour {
     private readonly Dictionary<ushort, ClientPlayer> players = new Dictionary<ushort, ClientPlayer>();
     private readonly Dictionary<ushort, ClientBullet> activeBullets = new Dictionary<ushort, ClientBullet>();
 
+    private readonly Queue<BulletSpawnData> bulletSpawns = new Queue<BulletSpawnData>();
     private readonly QueueBuffer<GameUpdateData> buffer = new QueueBuffer<GameUpdateData>(1);
 
     private void Awake() {
@@ -48,14 +49,18 @@ public class GameManager : MonoBehaviour {
     private void OnMessage(object sender, MessageReceivedEventArgs e) {
         using (var msg = e.GetMessage()) {
             switch ((MessageTag)msg.Tag) {
-                
-                case MessageTag.StartGameResponse:
-                    OnGameStart(msg.Deserialize<GameStartData>());
-                    break;
-                
                 case MessageTag.GameUpdate:
                     OnGameUpdate(msg.Deserialize<GameUpdateData>());
                     break;
+
+                case MessageTag.BulletResponse:
+                    OnBulletResponse(msg.Deserialize<BulletResponseData>());
+                    break;
+
+                case MessageTag.StartGameResponse:
+                    OnGameStart(msg.Deserialize<GameStartData>());
+                    break;
+
             }
         }
     }
@@ -105,9 +110,11 @@ public class GameManager : MonoBehaviour {
             }
         }
 
-        foreach (var bulletSpawnData in updateData.BulletSpawns) {
-            SpawnBullet(bulletSpawnData);
-        }
+        //foreach (var bulletSpawnData in updateData.BulletSpawns) {
+        //    if (bulletSpawnData.PlayerId != ConnectionManager.Instance.PlayerId) {
+        //        SpawnBullet(bulletSpawnData);
+        //    }
+        //}
 
         foreach (var bulletDespawnData in updateData.BulletDespawns) {
             DespawnBullet(bulletDespawnData.Id);
@@ -119,6 +126,11 @@ public class GameManager : MonoBehaviour {
             }
         }
 
+        while (bulletSpawns.Count > 0) {
+            var bullet = bulletSpawns.Dequeue();
+            SpawnBullet(bullet);
+        }
+
     }
 
     private void SpawnPlayer(PlayerSpawnData spawnData) {
@@ -126,6 +138,17 @@ public class GameManager : MonoBehaviour {
         var player = go.GetComponent<ClientPlayer>();
         player.Initialize(spawnData.Id, spawnData.Name);
         players.Add(spawnData.Id, player);
+    }
+
+    private void OnBulletResponse(BulletResponseData responseData) {
+        if (players.TryGetValue(responseData.PlayerId, out ClientPlayer p)) {
+            var spawnPosition = p.GunPoint.position;
+            var direction = p.transform.forward;
+            var spawnData = new BulletSpawnData(responseData.BulletId, responseData.PlayerId, spawnPosition, direction * responseData.Speed);
+
+            bulletSpawns.Enqueue(spawnData);
+        }
+
     }
 
     private void SpawnBullet(BulletSpawnData spawnData) {

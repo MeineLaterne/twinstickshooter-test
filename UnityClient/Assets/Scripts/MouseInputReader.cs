@@ -13,7 +13,9 @@ class MouseInputReader : MonoBehaviour, IInputReader {
         inputs[1] = Input.GetMouseButton(1);
         
         rotationAxes.Normalize();
+        
+        InputTick++;
 
-        return new PlayerInputData(inputs, movementAxes, rotationAxes, InputTick++);
+        return new PlayerInputData(inputs, movementAxes, rotationAxes, InputTick);
     }
 }

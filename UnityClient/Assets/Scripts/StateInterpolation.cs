@@ -6,22 +6,18 @@ public class StateInterpolation<T> {
     public T CurrentStateData { get; set; }
     public T PreviousStateData { get; private set; }
 
-    private IInterpolator<T> interpolator;
+    private readonly IInterpolator<T> interpolator;
     private float lastFixedTime;
 
     public StateInterpolation(IInterpolator<T> interpolator) {
         this.interpolator = interpolator;
     }
 
-    ~StateInterpolation() {
-        interpolator = null;
-    }
-
-    public void Interpolate(Transform transform) {
+    public void Interpolate() {
         var delta = Time.time - lastFixedTime;
         var t = delta / Time.fixedDeltaTime;
 
-        interpolator.Interpolate(transform, PreviousStateData, CurrentStateData, t);
+        interpolator.Interpolate(PreviousStateData, CurrentStateData, t);
     }
 
     public void PushStateData(T data) => Refresh(data, CurrentStateData);

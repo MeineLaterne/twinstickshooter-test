@@ -40,7 +40,7 @@ public class RoomManager : MonoBehaviour {
     }
 
     public void TryJoinRoom(IClient client, JoinRoomRequestData requestData) {
-        var canJoin = ServerManager.Instance.players.TryGetValue(client.ID, out var clientConnection);
+        var canJoin = ServerManager.Instance.Players.TryGetValue(client.ID, out var clientConnection);
         
         if (!rooms.TryGetValue(requestData.RoomName, out var room)) {
             canJoin = false;

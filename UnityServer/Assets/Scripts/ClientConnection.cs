@@ -18,8 +18,8 @@ public class ClientConnection {
         if (Room != null) {
             Room.RemovePlayer(this);
         }
-        ServerManager.Instance.players.Remove(client.ID);
-        ServerManager.Instance.playersByName.Remove(userName);
+        ServerManager.Instance.Players.Remove(client.ID);
+        ServerManager.Instance.PlayersByName.Remove(userName);
         client.MessageReceived -= OnMessage;
     }
 
@@ -30,6 +30,10 @@ public class ClientConnection {
 
                 case MessageTag.GameInput:
                     ServerPlayer.ReceiveInput(m.Deserialize<PlayerInputData>());
+                    break;
+                
+                case MessageTag.BulletRequest:
+                    Room.OnBulletRequest(m.Deserialize<BulletRequestData>());
                     break;
                 
                 case MessageTag.JoinRoomRequest:

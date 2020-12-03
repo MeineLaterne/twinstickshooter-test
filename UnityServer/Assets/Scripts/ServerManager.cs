@@ -7,8 +7,8 @@ using UnityEngine;
 [RequireComponent(typeof(XmlUnityServer))]
 public class ServerManager : MonoBehaviour {
     
-    public readonly Dictionary<ushort, ClientConnection> players = new Dictionary<ushort, ClientConnection>();
-    public readonly Dictionary<string, ClientConnection> playersByName = new Dictionary<string, ClientConnection>();
+    public readonly Dictionary<ushort, ClientConnection> Players = new Dictionary<ushort, ClientConnection>();
+    public readonly Dictionary<string, ClientConnection> PlayersByName = new Dictionary<string, ClientConnection>();
     
     public static ServerManager Instance { get; private set; }
 
@@ -39,7 +39,7 @@ public class ServerManager : MonoBehaviour {
     }
     
     private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
-        if (players.TryGetValue(e.Client.ID, out ClientConnection clientConnection)) {
+        if (Players.TryGetValue(e.Client.ID, out ClientConnection clientConnection)) {
             clientConnection.OnClientDisconnected(sender, e);
         }
         e.Client.MessageReceived -= OnMessage;
@@ -57,7 +57,7 @@ public class ServerManager : MonoBehaviour {
     }
 
     private void OnClientLogin(IClient client, LoginRequestData data) {
-        if (playersByName.ContainsKey(data.UserName)) {
+        if (PlayersByName.ContainsKey(data.UserName)) {
             // client bereits eingeloggt oder name bereits vergeben
             using (var message = Message.CreateEmpty((ushort)MessageTag.LoginDenied)) {
                 client.SendMessage(message, SendMode.Reliable);
@@ -71,8 +71,8 @@ public class ServerManager : MonoBehaviour {
 
         // ClientConnection erstellen und cachen
         var cc = new ClientConnection(data.UserName, client);
-        players.Add(client.ID, cc);
-        playersByName.Add(data.UserName, cc);
+        Players.Add(client.ID, cc);
+        PlayersByName.Add(data.UserName, cc);
 
         // Antwort an den client senden
         using (var m = Message.Create((ushort)MessageTag.LoginAccepted, new LoginResponseData(client.ID, new LobbyData(RoomManager.Instance.GetRoomData())))) {

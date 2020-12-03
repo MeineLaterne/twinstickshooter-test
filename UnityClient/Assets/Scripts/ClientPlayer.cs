@@ -6,6 +6,10 @@ using UnityEngine;
 [RequireComponent(typeof(IInputReader))]
 public class ClientPlayer : MonoBehaviour {
 
+    public Transform GunPoint => gunPoint;
+
+    [SerializeField] private Transform gunPoint;
+
     private PlayerController playerController;
     private StateInterpolation<PlayerStateData> interpolation;
     private IInputReader inputReader;
@@ -49,10 +53,11 @@ public class ClientPlayer : MonoBehaviour {
 
         var predictedState = history.Dequeue();
 
-        if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
-            return;
+        //if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
+        //    return;
 
-        Debug.Log($"start reconciliation for frame {predictedState.InputTick} : {playerState.InputTick}");
+        Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
+        Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {playerState.Position}");
         // dann setzen wir den Spieler auf den letzten authorisierten Zustand
         interpolation.CurrentStateData = playerState;
         transform.position = playerState.Position;
@@ -60,10 +65,13 @@ public class ClientPlayer : MonoBehaviour {
 
         // dann wenden wir alle noch nicht authorisierten inputs wieder an
         if (history.Count != 0) {
+            Debug.Log($"applying {history.Count} inputs...");
             var reconciliationInfos = history.ToArray();
             foreach (var ri in reconciliationInfos) {
+                Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
                 var psd = playerController.GetNextFrameData(ri.InputData, interpolation.CurrentStateData);
                 interpolation.PushStateData(psd);
+                Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
             }
         }
     }
@@ -86,25 +94,30 @@ public class ClientPlayer : MonoBehaviour {
         // erst wird der Spieler auf die letzte berechnete Position zurückgesetzt
         transform.position = interpolation.CurrentStateData.Position;
         transform.rotation = interpolation.CurrentStateData.Rotation;
+        
         // dann holen wir uns die Daten für den nächsten Frame
         var nextStateData = playerController.GetNextFrameData(inputData, interpolation.CurrentStateData);
 
         // dann starten wir die Interpolation
         interpolation.PushStateData(nextStateData);
 
-        transform.position = interpolation.CurrentStateData.Position;
-        transform.rotation = interpolation.CurrentStateData.Rotation;
+        // das ist jetzt nur zu Testzwecken hier
+        //transform.position = interpolation.CurrentStateData.Position;
+        //transform.rotation = interpolation.CurrentStateData.Rotation;
 
         if (inputData.Inputs[0]) {
             if (!shotLock) {
-                Debug.Log($"sending shot input with time: {inputData.InputTick}");
+                Debug.Log($"sending shot request with InputTick: {inputData.InputTick}");
+                using (var msg = Message.Create((ushort)MessageTag.BulletRequest, new BulletRequestData(id, inputData.InputTick))) {
+                    ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
+                }
                 shotLock = true;
             }
         } else {
             shotLock = false;
         }
 
-        //Debug.Log($"sending input {inputData.Frame}");
+        Debug.Log($"sending input {inputData.InputTick}: {inputData.MovementAxes} => {nextStateData.Position}");
 
         // ...senden den input an den Server
         using (var msg = Message.Create((ushort)MessageTag.GameInput, inputData)) {

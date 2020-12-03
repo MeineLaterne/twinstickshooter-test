@@ -14,7 +14,10 @@ public enum MessageTag : ushort {
     GameUpdate = 201,
     StartGameRequest = 202,
     StartGameResponse = 203,
-    BulletUpdate = 205,
+    
+    BulletRequest = 300,
+    BulletResponse = 301,
+    BulletUpdate = 302,
 }
 
 public struct LoginRequestData : IDarkRiftSerializable {
@@ -288,23 +291,27 @@ public struct GameStartData : IDarkRiftSerializable {
 public struct BulletStateData : IDarkRiftSerializable {
     public ushort Id;
     public ushort PlayerId;
+    public uint Frame;
     public Vector3 Position;
 
-    public BulletStateData(ushort id, ushort playerId, Vector3 position) {
+    public BulletStateData(ushort id, ushort playerId, uint frame, Vector3 position) {
         Id = id;
         PlayerId = playerId;
+        Frame = frame;
         Position = position;
     }
 
     public void Deserialize(DeserializeEvent e) {
         Id = e.Reader.ReadUInt16();
         PlayerId = e.Reader.ReadUInt16();
+        Frame = e.Reader.ReadUInt32();
         Position = new Vector3(e.Reader.ReadSingle(), e.Reader.ReadSingle(), e.Reader.ReadSingle());
     }
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Id);
         e.Writer.Write(PlayerId);
+        e.Writer.Write(Frame);
         e.Writer.Write(Position.x);
         e.Writer.Write(Position.y);
         e.Writer.Write(Position.z);
@@ -359,6 +366,52 @@ public struct BulletDespawnData : IDarkRiftSerializable {
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Id);
+    }
+}
+
+public struct BulletRequestData : IDarkRiftSerializable {
+
+    public ushort PlayerId;
+    public uint InputTick;
+
+    public BulletRequestData(ushort playerId, uint inputTick) {
+        PlayerId = playerId;
+        InputTick = inputTick;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        PlayerId = e.Reader.ReadUInt16();
+        InputTick = e.Reader.ReadUInt32();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(PlayerId);
+        e.Writer.Write(InputTick);
+    }
+}
+
+public struct BulletResponseData : IDarkRiftSerializable {
+
+    public ushort PlayerId;
+    public ushort BulletId;
+    public float Speed;
+
+    public BulletResponseData(ushort playerId, ushort bulletId, float speed) {
+        PlayerId = playerId;
+        BulletId = bulletId;
+        Speed = speed;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        PlayerId = e.Reader.ReadUInt16();
+        BulletId = e.Reader.ReadUInt16();
+        Speed = e.Reader.ReadSingle();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(PlayerId);
+        e.Writer.Write(BulletId);
+        e.Writer.Write(Speed);
     }
 }
 

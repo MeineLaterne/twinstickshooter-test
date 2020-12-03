@@ -20,17 +20,18 @@ public class Room : MonoBehaviour {
     [SerializeField] private GameObject playerPrefab;
     
     private Scene scene;
-    private PhysicsScene physicsScene;
-
+    
     private readonly List<ServerPlayer> serverPlayers = new List<ServerPlayer>();
     private readonly List<PlayerStateData> playerStates = new List<PlayerStateData>();
     private readonly List<PlayerSpawnData> playerSpawns = new List<PlayerSpawnData>();
     private readonly List<PlayerDespawnData> playerDespawns = new List<PlayerDespawnData>();
 
     private readonly List<ServerBullet> serverBullets = new List<ServerBullet>();
-    private readonly Dictionary<ushort, BulletStateData> bulletStates = new Dictionary<ushort, BulletStateData>();
     private readonly List<BulletSpawnData> bulletSpawns = new List<BulletSpawnData>();
     private readonly List<BulletDespawnData> bulletDespawns = new List<BulletDespawnData>();
+    private readonly Dictionary<ushort, BulletStateData> bulletStates = new Dictionary<ushort, BulletStateData>();
+
+    private readonly Queue<ServerBullet> requestedBullets = new Queue<ServerBullet>();
 
     public void Initialize(string roomName, byte slots) {
         this.roomName = roomName;
@@ -38,8 +39,7 @@ public class Room : MonoBehaviour {
 
         var csp = new CreateSceneParameters(LocalPhysicsMode.Physics3D);
         scene = SceneManager.CreateScene($"room_{roomName}", csp);
-        physicsScene = scene.GetPhysicsScene();
-
+        
         SceneManager.MoveGameObjectToScene(gameObject, scene);
     }
 
@@ -81,26 +81,43 @@ public class Room : MonoBehaviour {
         Destroy(clientConnection.ServerPlayer.gameObject);
     }
 
-    public void SpawnBullet(ServerPlayer shooter) {
-        var spawnPosition = shooter.GunPointState.Position;
-        var direction = shooter.GunPointState.Direction;
-        var bullet = BulletPool.Obtain(true);
-        var serverBullet = bullet.GetComponent<ServerBullet>();
-        var spawnData = new BulletSpawnData((ushort)BulletPool.LastObtainedIndex, shooter.PlayerState.Id, spawnPosition, direction * serverBullet.Speed);
+    public void OnBulletRequest(BulletRequestData requestData) {
+        if (ServerManager.Instance.Players.TryGetValue(requestData.PlayerId, out ClientConnection clientConnection)) {
+            
+            var bullet = BulletPool.Obtain(true);
+            var serverBullet = bullet.GetComponent<ServerBullet>();
 
-        serverBullet.Initialize(shooter, spawnData);
+            serverBullet.Initialize((ushort)BulletPool.LastObtainedIndex, requestData.PlayerId, clientConnection.ServerPlayer);
 
-        serverBullets.Add(serverBullet);
-        bulletStates[serverBullet.Id] = serverBullet.BulletState;
-        bulletSpawns.Add(spawnData);
+            requestedBullets.Enqueue(serverBullet);
 
-        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} velocity {direction * serverBullet.Speed}");
+            var bulletResponse = new BulletResponseData(requestData.PlayerId, serverBullet.Id, serverBullet.Speed);
+
+            foreach (var p in serverPlayers) {
+                using (var msg = Message.Create((ushort)MessageTag.BulletResponse, bulletResponse)) {
+                    p.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
+
+        }
+    }
+
+    public void SpawnBullet(ServerBullet bullet) {
+        var spawnPosition = bullet.Owner.GunPointState.Position;
+        var direction = bullet.Owner.GunPointState.Direction;
+        var spawnData = new BulletSpawnData(bullet.Id, bullet.PlayerId, spawnPosition, direction * bullet.Speed);
+
+        serverBullets.Add(bullet);
+        bulletStates[bullet.Id] = bullet.BulletState;
+        
+        bullet.Go(spawnData);
+
+        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} velocity {direction * bullet.Speed}");
     }
 
     public void DespawnBullet(ServerBullet bullet) {
-        var idx = serverBullets.IndexOf(bullet);
         BulletPool.Free(bullet.gameObject);
-        serverBullets.RemoveAt(idx);
+        serverBullets.Remove(bullet);
         bulletStates.Remove(bullet.Id);
         bulletDespawns.Add(new BulletDespawnData(bullet.Id));
     }
@@ -172,6 +189,12 @@ public class Room : MonoBehaviour {
 
         }
 
+        // bullets für den nächsten frame initialisieren
+        while (requestedBullets.Count > 0) {
+            var bullet = requestedBullets.Dequeue();
+            SpawnBullet(bullet);
+        }
+
         // spawnlisten clearen, damit nichts doppelt gespawnt wird
         playerSpawns.Clear();
         playerDespawns.Clear();
@@ -179,4 +202,5 @@ public class Room : MonoBehaviour {
         bulletSpawns.Clear();
         bulletDespawns.Clear();
     }
+
 }
