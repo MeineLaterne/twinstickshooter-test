@@ -8,6 +8,14 @@ public class BulletController : MonoBehaviour {
     private uint frame;
     private CharacterController characterController;
 
+    public void ResetTo(BulletStateData stateData) {
+        characterController.enabled = false;
+
+        transform.localPosition = stateData.Position;
+
+        characterController.enabled = true;
+    }
+
     public BulletStateData GetNextFrameData(BulletStateData currentState) {
         frame++;
         characterController.Move(Velocity * Time.fixedDeltaTime);

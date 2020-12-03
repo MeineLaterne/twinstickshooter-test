@@ -63,20 +63,17 @@ public class ClientBullet : MonoBehaviour {
     private void FixedUpdate() {
         if (!isLocal) return;
 
-        transform.position = interpolation.CurrentStateData.Position;
+        bulletController.ResetTo(interpolation.CurrentStateData);
 
         var nextStateData = bulletController.GetNextFrameData(interpolation.CurrentStateData);
 
         interpolation.PushStateData(nextStateData);
 
-        // nur zum testen
-        transform.position = interpolation.CurrentStateData.Position;
-
         history.Enqueue(new BulletReconciliationInfo(nextStateData.Frame, nextStateData));
     }
 
     private void Update() {
-        //interpolation.Interpolate();
+        interpolation.Interpolate();
     }
 
     private void OnDisable() {
