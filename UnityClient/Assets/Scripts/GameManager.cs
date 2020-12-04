@@ -144,7 +144,7 @@ public class GameManager : MonoBehaviour {
         if (players.TryGetValue(responseData.PlayerId, out ClientPlayer p)) {
             var spawnPosition = p.GunPoint.position;
             var direction = p.transform.forward;
-            var spawnData = new BulletSpawnData(responseData.BulletId, responseData.PlayerId, spawnPosition, direction * responseData.Speed);
+            var spawnData = new BulletSpawnData(responseData.BulletId, responseData.PlayerId, spawnPosition, direction);
 
             bulletSpawns.Enqueue(spawnData);
         }

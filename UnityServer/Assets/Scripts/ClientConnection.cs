@@ -31,6 +31,10 @@ public class ClientConnection {
                 case MessageTag.GameInput:
                     ServerPlayer.ReceiveInput(m.Deserialize<PlayerInputData>());
                     break;
+
+                case MessageTag.BulletInput:
+                    ServerPlayer.ReceiveBulletInput(m.Deserialize<BulletInputData>());
+                    break;
                 
                 case MessageTag.BulletRequest:
                     Room.OnBulletRequest(m.Deserialize<BulletRequestData>());

@@ -1,4 +1,4 @@
-﻿public interface IInputReader {
+﻿public interface IInputReader<T> {
     uint InputTick { get; }
-    PlayerInputData ReadInput();
+    T ReadInput();
 }

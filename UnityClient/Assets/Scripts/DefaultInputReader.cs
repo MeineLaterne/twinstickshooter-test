@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 
-public class DefaultInputReader : MonoBehaviour, IInputReader
-{
+public class DefaultInputReader : MonoBehaviour, IInputReader<PlayerInputData> {
     [SerializeField] private float stickDeadzone = 0.2f;
 
     public uint InputTick { get; private set; }
@@ -17,7 +16,9 @@ public class DefaultInputReader : MonoBehaviour, IInputReader
         inputs[0] = Input.GetButton("Fire1");
         inputs[1] = Mathf.Abs(rotationAxes.x) > stickDeadzone || Mathf.Abs(rotationAxes.y) > stickDeadzone;
 
-        return new PlayerInputData(inputs, movementAxes, rotationAxes, InputTick++);
+        InputTick++;
+
+        return new PlayerInputData(inputs, movementAxes, rotationAxes, InputTick);
     }
 
 }

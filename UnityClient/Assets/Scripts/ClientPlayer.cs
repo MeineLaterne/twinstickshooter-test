@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(PlayerController))]
-[RequireComponent(typeof(IInputReader))]
+[RequireComponent(typeof(IInputReader<PlayerInputData>))]
 public class ClientPlayer : MonoBehaviour {
 
     public Transform GunPoint => gunPoint;
@@ -12,7 +12,7 @@ public class ClientPlayer : MonoBehaviour {
 
     private PlayerController playerController;
     private StateInterpolation<PlayerStateData> interpolation;
-    private IInputReader inputReader;
+    private IInputReader<PlayerInputData> inputReader;
 
     private ushort id;
     private bool isLocalPlayer;
@@ -78,7 +78,7 @@ public class ClientPlayer : MonoBehaviour {
 
     private void Awake() {
         playerController = GetComponent<PlayerController>();
-        inputReader = GetComponent<IInputReader>();
+        inputReader = GetComponent<IInputReader<PlayerInputData>>();
     }
 
     private void Update() {

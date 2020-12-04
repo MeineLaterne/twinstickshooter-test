@@ -18,6 +18,9 @@ public class ServerPlayer : MonoBehaviour {
     [SerializeField] private Transform gunPoint;
 
     private ClientConnection clientConnection;
+
+    private readonly Dictionary<ushort, ServerBullet> bullets = new Dictionary<ushort, ServerBullet>();
+
     private readonly QueueBuffer<PlayerInputData> inputBuffer = new QueueBuffer<PlayerInputData>(1);
     private PlayerInputData[] inputsToProcess;
 
@@ -35,12 +38,16 @@ public class ServerPlayer : MonoBehaviour {
         InputTick = 0;
         
         PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
-        
-        
 
     }
 
     public void ReceiveInput(PlayerInputData inputData) => inputBuffer.Add(inputData);
+
+    internal void ReceiveBulletInput(BulletInputData inputData) {
+        if (bullets.TryGetValue(inputData.Id, out ServerBullet bullet)) {
+            bullet.ReceiveInput(inputData);
+        }
+    }
 
     public void PlayerPreUpdate() {
         inputsToProcess = inputBuffer.Get();
@@ -69,6 +76,16 @@ public class ServerPlayer : MonoBehaviour {
     // TODO: prefab index richtig an andere clients weitergeben
     public PlayerSpawnData GetSpawnData() {
         return new PlayerSpawnData(clientConnection.client.ID, 0, clientConnection.userName, transform.localPosition);
+    }
+
+    internal void AddBullet(ServerBullet bullet) {
+        bullets[bullet.Id] = bullet;
+    }
+
+    internal void RemoveBullet(ushort bulletId) {
+        if (bullets.ContainsKey(bulletId)) {
+            bullets.Remove(bulletId);
+        }
     }
 
     private void Awake() {

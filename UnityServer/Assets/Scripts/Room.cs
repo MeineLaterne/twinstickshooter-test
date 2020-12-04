@@ -91,7 +91,7 @@ public class Room : MonoBehaviour {
 
             requestedBullets.Enqueue(serverBullet);
 
-            var bulletResponse = new BulletResponseData(requestData.PlayerId, serverBullet.Id, serverBullet.Speed);
+            var bulletResponse = new BulletResponseData(requestData.PlayerId, serverBullet.Id);
 
             foreach (var p in serverPlayers) {
                 using (var msg = Message.Create((ushort)MessageTag.BulletResponse, bulletResponse)) {
@@ -105,14 +105,14 @@ public class Room : MonoBehaviour {
     public void SpawnBullet(ServerBullet bullet) {
         var spawnPosition = bullet.Owner.GunPointState.Position;
         var direction = bullet.Owner.GunPointState.Direction;
-        var spawnData = new BulletSpawnData(bullet.Id, bullet.PlayerId, spawnPosition, direction * bullet.Speed);
+        var spawnData = new BulletSpawnData(bullet.Id, bullet.PlayerId, spawnPosition, direction);
 
         serverBullets.Add(bullet);
         bulletStates[bullet.Id] = bullet.BulletState;
         
         bullet.Go(spawnData);
 
-        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} velocity {direction * bullet.Speed}");
+        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} direction {direction}");
     }
 
     public void DespawnBullet(ServerBullet bullet) {
@@ -170,7 +170,6 @@ public class Room : MonoBehaviour {
         var bulletStateUpdates = new BulletStateData[bulletStates.Count];
         bulletStates.Values.CopyTo(bulletStateUpdates, 0);
 
-        var bulletSpawnUpdates = bulletSpawns.ToArray();
         var bulletDespawnUpdates = bulletDespawns.ToArray();
 
         foreach (var p in serverPlayers) {
@@ -178,7 +177,7 @@ public class Room : MonoBehaviour {
             var updateData = new GameUpdateData(
                 p.InputTick,
                 playerStateUpdates, spawnDataUpdates, despawnDataUpdates,
-                bulletStateUpdates, bulletSpawnUpdates, bulletDespawnUpdates
+                bulletStateUpdates, bulletDespawnUpdates
             );
 
             //Debug.Log($"sending update: {updateData.Frame}");

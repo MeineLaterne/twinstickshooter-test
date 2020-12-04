@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-class MouseInputReader : MonoBehaviour, IInputReader {
+class MouseInputReader : MonoBehaviour, IInputReader<PlayerInputData> {
     public uint InputTick { get; private set; }
 
     public PlayerInputData ReadInput() {

@@ -3,12 +3,15 @@
 [RequireComponent(typeof(CharacterController))]
 public class BulletController : MonoBehaviour {
 
-    public Vector3 Velocity { get; set; }
+    internal event System.Action<Vector3> VelocityChanged;
+    
+    [SerializeField] private float movementSpeed;
 
-    private uint frame;
     private CharacterController characterController;
 
-    public void ResetTo(BulletStateData stateData) {
+    private Vector3 velocity;
+
+    internal void ResetTo(BulletStateData stateData) {
         characterController.enabled = false;
 
         transform.localPosition = stateData.Position;
@@ -16,10 +19,12 @@ public class BulletController : MonoBehaviour {
         characterController.enabled = true;
     }
 
-    public BulletStateData GetNextFrameData(BulletStateData currentState) {
-        frame++;
-        characterController.Move(Velocity * Time.fixedDeltaTime);
-        return new BulletStateData(currentState.Id, currentState.PlayerId, frame, transform.localPosition);
+    public BulletStateData GetNextFrameData(BulletInputData inputData, BulletStateData currentState) {
+        velocity = new Vector3(inputData.MovementAxes.x, 0, inputData.MovementAxes.y) * movementSpeed * Time.fixedDeltaTime;
+        
+        characterController.Move(velocity);
+        
+        return new BulletStateData(currentState.Id, currentState.PlayerId, inputData.InputTick, transform.localPosition);
     }
 
     private void Awake() {
@@ -28,7 +33,8 @@ public class BulletController : MonoBehaviour {
 
     private void OnControllerColliderHit(ControllerColliderHit hit) {
         if (hit.collider.CompareTag("Obstacle")) {
-            Velocity = Velocity.Bounce(hit.normal);
+            velocity = velocity.Bounce(hit.normal);
+            VelocityChanged?.Invoke(velocity);
         }
     }
 
