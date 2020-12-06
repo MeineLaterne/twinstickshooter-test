@@ -56,22 +56,22 @@ public class ClientPlayer : MonoBehaviour {
         if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
             return;
 
-        Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
-        Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {playerState.Position}");
+        //Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
+        //Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {playerState.Position}");
         // dann setzen wir den Spieler auf den letzten authorisierten Zustand
         interpolation.CurrentStateData = playerState;
         playerController.ResetTo(playerState);
 
         // dann wenden wir alle noch nicht authorisierten inputs wieder an
         if (history.Count != 0) {
-            Debug.Log($"applying {history.Count} inputs...");
+            //Debug.Log($"applying {history.Count} inputs...");
             var reconciliationInfos = history.ToArray();
             foreach (var ri in reconciliationInfos) {
-                Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
+                //Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
                 playerController.ResetTo(interpolation.CurrentStateData);
                 var psd = playerController.GetNextFrameData(ri.InputData, interpolation.CurrentStateData);
                 interpolation.PushStateData(psd);
-                Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
+                //Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
             }
         }
     }

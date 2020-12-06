@@ -6,8 +6,6 @@
 /// <typeparam name="T"></typeparam>
 public class QueueBuffer<T> {
 
-    public static readonly T[] Empty = new T[0];
-
     private readonly Queue<T> elements = new Queue<T>();
     private readonly int bufferSize;
     
@@ -28,9 +26,11 @@ public class QueueBuffer<T> {
 
     public void Add(T element) => elements.Enqueue(element);
 
+    public void Clear() => elements.Clear();
+
     public T[] Get() {
         if (elements.Count - 1 < bufferSize) {
-            return Empty;
+            return new T[0];
         }
 
         var amount = elements.Count - bufferSize;

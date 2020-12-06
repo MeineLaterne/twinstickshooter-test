@@ -86,17 +86,17 @@ public class GameManager : MonoBehaviour {
         foreach (var data in dataToProcess) {
             UpdateClientGameState(data);
         }
+
+        while (bulletSpawns.Count > 0) {
+            var bullet = bulletSpawns.Dequeue();
+            SpawnBullet(bullet);
+        }
     }
 
     private void UpdateClientGameState(GameUpdateData updateData) {
         LastServerTick = updateData.Frame;
 
-        foreach (var spawnData in updateData.SpawnData) {
-            if (spawnData.Id != ConnectionManager.Instance.PlayerId) {
-                SpawnPlayer(spawnData);
-            }
-        }
-
+        // despawn
         foreach (var despawnData in updateData.DespawnData) {
             if (players.ContainsKey(despawnData.Id)) {
                 Destroy(players[despawnData.Id].gameObject);
@@ -104,31 +104,28 @@ public class GameManager : MonoBehaviour {
             }
         }
 
+        foreach (var bulletDespawnData in updateData.BulletDespawns) {
+            DespawnBullet(bulletDespawnData.Id);
+        }
+        
+        // spawn
+        foreach (var spawnData in updateData.SpawnData) {
+            if (spawnData.Id != ConnectionManager.Instance.PlayerId) {
+                SpawnPlayer(spawnData);
+            }
+        }
+
+        // update
         foreach (var playerState in updateData.PlayerStates) {
             if (players.TryGetValue(playerState.Id, out ClientPlayer p)) {
                 p.UpdatePlayerState(playerState);
             }
         }
 
-        //foreach (var bulletSpawnData in updateData.BulletSpawns) {
-        //    if (bulletSpawnData.PlayerId != ConnectionManager.Instance.PlayerId) {
-        //        SpawnBullet(bulletSpawnData);
-        //    }
-        //}
-
-        foreach (var bulletDespawnData in updateData.BulletDespawns) {
-            DespawnBullet(bulletDespawnData.Id);
-        }
-
         foreach (var bulletState in updateData.BulletStates) {
             if (activeBullets.TryGetValue(bulletState.Id, out ClientBullet b)) {
                 b.UpdateBulletState(bulletState);
             }
-        }
-
-        while (bulletSpawns.Count > 0) {
-            var bullet = bulletSpawns.Dequeue();
-            SpawnBullet(bullet);
         }
 
     }
@@ -154,16 +151,21 @@ public class GameManager : MonoBehaviour {
     private void SpawnBullet(BulletSpawnData spawnData) {
         var go = bulletPool.Obtain(true);
         var bullet = go.GetComponent<ClientBullet>();
-        bullet.Initialize(spawnData);
-        activeBullets.Add(spawnData.Id, bullet);
-        Debug.Log($"spawning bullet: {bullet.Id} at {go.transform.position}");
+        if (players.TryGetValue(spawnData.PlayerId, out ClientPlayer p)) {
+            spawnData.Position = p.GunPoint.position;
+            spawnData.Velocity = p.transform.forward;
+            bullet.Initialize(spawnData);
+            activeBullets.Add(spawnData.Id, bullet);
+            Debug.Log($"spawning bullet: {bullet.Id} at {go.transform.position}\nplayer position: {p.transform.position}");
+        }
+        
     }
 
     private void DespawnBullet(ushort bulletId) {
         if (activeBullets.TryGetValue(bulletId, out ClientBullet bullet)) {
             bulletPool.Free(bullet.gameObject);
             activeBullets.Remove(bulletId);
-            Debug.Log($"despawning bullet: {bulletId}");
+            Debug.Log($"despawning bullet {bulletId} at {bullet.transform.position}");
         }
     }
 

@@ -108,9 +108,8 @@ public class Room : MonoBehaviour {
         var spawnData = new BulletSpawnData(bullet.Id, bullet.PlayerId, spawnPosition, direction);
 
         serverBullets.Add(bullet);
-        bulletStates[bullet.Id] = bullet.BulletState;
-        
-        bullet.Go(spawnData);
+
+        bulletStates[bullet.Id] = bullet.Go(spawnData);
 
         Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} direction {direction}");
     }
@@ -120,6 +119,7 @@ public class Room : MonoBehaviour {
         serverBullets.Remove(bullet);
         bulletStates.Remove(bullet.Id);
         bulletDespawns.Add(new BulletDespawnData(bullet.Id));
+        Debug.Log($"despawning bullet {bullet.Id} at {bullet.transform.position}");
     }
 
     public void Close() {
@@ -198,7 +198,6 @@ public class Room : MonoBehaviour {
         playerSpawns.Clear();
         playerDespawns.Clear();
 
-        bulletSpawns.Clear();
         bulletDespawns.Clear();
     }
 

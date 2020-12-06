@@ -20,13 +20,13 @@ public class ServerBullet : MonoBehaviour {
         transform.localPosition = new Vector3(10000, 10000, 10000);
     }
 
-    public void Go(BulletSpawnData spawnData) {
+    public BulletStateData Go(BulletSpawnData spawnData) {
         BulletState = new BulletStateData(Id, PlayerId, 0, spawnData.Position);
-        transform.localPosition = spawnData.Position;
+        bulletController.ResetTo(BulletState);
 
         Owner.AddBullet(this);
 
-        GetComponent<CharacterController>().enabled = true;
+        return BulletState;
     }
 
     public BulletStateData BulletUpdate() {
@@ -37,6 +37,7 @@ public class ServerBullet : MonoBehaviour {
         }
         
         transform.localPosition = BulletState.Position;
+
         return BulletState;
     }
 
@@ -51,6 +52,7 @@ public class ServerBullet : MonoBehaviour {
             Owner.RemoveBullet(Id);
             Owner = null;
         }
+        inputBuffer.Clear();
         GetComponent<CharacterController>().enabled = false;
     }
 
@@ -58,7 +60,6 @@ public class ServerBullet : MonoBehaviour {
         if (!hit.collider.CompareTag("Obstacle")) {
             Owner.RemoveBullet(Id);
             Owner.Room.DespawnBullet(this);
-            Debug.Log($"bullet {Id} hit {hit.collider.gameObject.name}");
         }
     }
 

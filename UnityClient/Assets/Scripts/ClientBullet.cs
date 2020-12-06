@@ -26,7 +26,7 @@ public class ClientBullet : MonoBehaviour {
         transform.position = spawnData.Position;
         Direction = spawnData.Velocity;
 
-        interpolation.CurrentStateData = new BulletStateData(Id, playerId, 0, spawnData.Position);
+        interpolation.Initialize(new BulletStateData(Id, playerId, 0, spawnData.Position));
 
         GetComponent<CharacterController>().enabled = true;
     }
@@ -52,19 +52,32 @@ public class ClientBullet : MonoBehaviour {
         if (Vector3.Distance(predictedState.StateData.Position, stateData.Position) < 0.05f)
             return;
 
+        Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
+        Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {stateData.Position}");
+
         interpolation.CurrentStateData = stateData;
         
         var h = history.ToArray();
         foreach (var ri in h) {
+            Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
             bulletController.ResetTo(interpolation.CurrentStateData);
             var sd = bulletController.GetNextFrameData(ri.InputData, interpolation.CurrentStateData);
             interpolation.PushStateData(sd);
+            Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
         }
 
     }
 
     private void OnControllerVelocityChanged(Vector3 velocity) {
         Direction = Vector3.Normalize(velocity);
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit) {
+        if (!hit.collider.CompareTag("Obstacle")) {
+            GetComponent<CharacterController>().enabled = false;
+            Direction = Vector3.zero;
+            transform.position = new Vector3(1000, 1000, 1000);
+        }
     }
 
     private void Awake() {
@@ -86,6 +99,8 @@ public class ClientBullet : MonoBehaviour {
 
         interpolation.PushStateData(nextStateData);
 
+        //Debug.Log($"FixedUpdate: interpolation from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
+
         using (var msg = Message.Create((ushort)MessageTag.BulletInput, inputData)) {
             ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
         }
@@ -98,7 +113,7 @@ public class ClientBullet : MonoBehaviour {
     }
 
     private void OnDisable() {
-        GetComponent<CharacterController>().enabled = false;
+        history.Clear();
     }
 
     private void OnDestroy() {
