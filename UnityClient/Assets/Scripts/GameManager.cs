@@ -6,10 +6,9 @@ using UnityEngine;
 [RequireComponent(typeof(GameObjectPool))]
 public class GameManager : MonoBehaviour {
     
-    public static GameManager Instance { get; private set; }
-    
-    public uint ClientTick { get; private set; }
-    public uint LastServerTick { get; private set; }
+    internal static GameManager Instance { get; private set; }
+    internal uint ClientTick { get; private set; }
+    internal uint LastServerTick { get; private set; }
 
     [SerializeField] private GameObject[] playerPrefabs;
 
@@ -18,7 +17,7 @@ public class GameManager : MonoBehaviour {
     private readonly Dictionary<ushort, ClientPlayer> players = new Dictionary<ushort, ClientPlayer>();
     private readonly Dictionary<ushort, ClientBullet> activeBullets = new Dictionary<ushort, ClientBullet>();
 
-    private readonly Queue<BulletSpawnData> bulletSpawns = new Queue<BulletSpawnData>();
+    private readonly Queue<BulletResponseData> bulletResponses = new Queue<BulletResponseData>();
     private readonly QueueBuffer<GameUpdateData> buffer = new QueueBuffer<GameUpdateData>(1);
 
     private void Awake() {
@@ -87,8 +86,8 @@ public class GameManager : MonoBehaviour {
             UpdateClientGameState(data);
         }
 
-        while (bulletSpawns.Count > 0) {
-            var bullet = bulletSpawns.Dequeue();
+        while (bulletResponses.Count > 0) {
+            var bullet = bulletResponses.Dequeue();
             SpawnBullet(bullet);
         }
     }
@@ -108,13 +107,6 @@ public class GameManager : MonoBehaviour {
             DespawnBullet(bulletDespawnData.Id);
         }
         
-        // spawn
-        foreach (var spawnData in updateData.SpawnData) {
-            if (spawnData.Id != ConnectionManager.Instance.PlayerId) {
-                SpawnPlayer(spawnData);
-            }
-        }
-
         // update
         foreach (var playerState in updateData.PlayerStates) {
             if (players.TryGetValue(playerState.Id, out ClientPlayer p)) {
@@ -137,23 +129,18 @@ public class GameManager : MonoBehaviour {
         players.Add(spawnData.Id, player);
     }
 
-    private void OnBulletResponse(BulletResponseData responseData) {
+    private void OnBulletResponse(BulletResponseData responseData) => bulletResponses.Enqueue(responseData);
+
+    private void SpawnBullet(BulletResponseData responseData) {
         if (players.TryGetValue(responseData.PlayerId, out ClientPlayer p)) {
-            var spawnPosition = p.GunPoint.position;
-            var direction = p.transform.forward;
-            var spawnData = new BulletSpawnData(responseData.BulletId, responseData.PlayerId, spawnPosition, direction);
-
-            bulletSpawns.Enqueue(spawnData);
-        }
-
-    }
-
-    private void SpawnBullet(BulletSpawnData spawnData) {
-        var go = bulletPool.Obtain(true);
-        var bullet = go.GetComponent<ClientBullet>();
-        if (players.TryGetValue(spawnData.PlayerId, out ClientPlayer p)) {
-            spawnData.Position = p.GunPoint.position;
-            spawnData.Velocity = p.transform.forward;
+            var go = bulletPool.Obtain(true);
+            var bullet = go.GetComponent<ClientBullet>();
+            var spawnData = new BulletSpawnData(
+                responseData.BulletId,
+                responseData.PlayerId,
+                p.GunPoint.position,
+                p.transform.forward
+            );
             bullet.Initialize(spawnData);
             activeBullets.Add(spawnData.Id, bullet);
             Debug.Log($"spawning bullet: {bullet.Id} at {go.transform.position}\nplayer position: {p.transform.position}");

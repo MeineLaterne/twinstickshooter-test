@@ -56,10 +56,19 @@ public class ServerBullet : MonoBehaviour {
         GetComponent<CharacterController>().enabled = false;
     }
 
+    private void Disable() {
+        Owner.RemoveBullet(Id);
+        Owner.Room.DespawnBullet(this);
+    }
+
     private void OnControllerColliderHit(ControllerColliderHit hit) {
         if (!hit.collider.CompareTag("Obstacle")) {
-            Owner.RemoveBullet(Id);
-            Owner.Room.DespawnBullet(this);
+            Disable();
+        }
+
+        if (hit.collider.CompareTag("Bullet")) {
+            var otherBullet = hit.collider.gameObject.GetComponent<ServerBullet>();
+            otherBullet.Disable();
         }
     }
 

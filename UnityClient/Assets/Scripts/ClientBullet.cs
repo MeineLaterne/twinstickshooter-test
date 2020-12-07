@@ -52,18 +52,18 @@ public class ClientBullet : MonoBehaviour {
         if (Vector3.Distance(predictedState.StateData.Position, stateData.Position) < 0.05f)
             return;
 
-        Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
-        Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {stateData.Position}");
+        //Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
+        //Debug.Log($"predicted position: {predictedState.StateData.Position}\nserver position: {stateData.Position}");
 
         interpolation.CurrentStateData = stateData;
         
         var h = history.ToArray();
         foreach (var ri in h) {
-            Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
+            //Debug.Log($"applying input {ri.InputTick}: {ri.InputData.MovementAxes}");
             bulletController.ResetTo(interpolation.CurrentStateData);
             var sd = bulletController.GetNextFrameData(ri.InputData, interpolation.CurrentStateData);
             interpolation.PushStateData(sd);
-            Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
+            //Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
         }
 
     }
@@ -74,10 +74,19 @@ public class ClientBullet : MonoBehaviour {
 
     private void OnControllerColliderHit(ControllerColliderHit hit) {
         if (!hit.collider.CompareTag("Obstacle")) {
-            GetComponent<CharacterController>().enabled = false;
-            Direction = Vector3.zero;
-            transform.position = new Vector3(1000, 1000, 1000);
+            Disable();
         }
+
+        if (hit.collider.CompareTag("Bullet")) {
+            var otherBullet = hit.collider.gameObject.GetComponent<ClientBullet>();
+            otherBullet.Disable();
+        }
+    }
+
+    private void Disable() {
+        GetComponent<CharacterController>().enabled = false;
+        Direction = Vector3.zero;
+        transform.position = new Vector3(1000, 1000, 1000);
     }
 
     private void Awake() {

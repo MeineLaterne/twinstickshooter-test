@@ -223,7 +223,6 @@ public struct GameUpdateData : IDarkRiftSerializable {
 
     public uint Frame;
     public PlayerStateData[] PlayerStates;
-    public PlayerSpawnData[] SpawnData;
     public PlayerDespawnData[] DespawnData;
     public BulletStateData[] BulletStates;
     public BulletDespawnData[] BulletDespawns;
@@ -231,14 +230,12 @@ public struct GameUpdateData : IDarkRiftSerializable {
     public GameUpdateData(
         uint frame, 
         PlayerStateData[] playerStates, 
-        PlayerSpawnData[] spawnData, 
         PlayerDespawnData[] despawnData,
         BulletStateData[] bulletStates,
         BulletDespawnData[] bulletDespawns) {
         
         Frame = frame;
         PlayerStates = playerStates;
-        SpawnData = spawnData;
         DespawnData = despawnData;
         BulletStates = bulletStates;
         BulletDespawns = bulletDespawns;
@@ -247,7 +244,6 @@ public struct GameUpdateData : IDarkRiftSerializable {
     public void Deserialize(DeserializeEvent e) {
         Frame = e.Reader.ReadUInt32();
         PlayerStates = e.Reader.ReadSerializables<PlayerStateData>();
-        SpawnData = e.Reader.ReadSerializables<PlayerSpawnData>();
         DespawnData = e.Reader.ReadSerializables<PlayerDespawnData>();
         BulletStates = e.Reader.ReadSerializables<BulletStateData>();
         BulletDespawns = e.Reader.ReadSerializables<BulletDespawnData>();
@@ -256,7 +252,6 @@ public struct GameUpdateData : IDarkRiftSerializable {
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(Frame);
         e.Writer.Write(PlayerStates);
-        e.Writer.Write(SpawnData);
         e.Writer.Write(DespawnData);
         e.Writer.Write(BulletStates);
         e.Writer.Write(BulletDespawns);

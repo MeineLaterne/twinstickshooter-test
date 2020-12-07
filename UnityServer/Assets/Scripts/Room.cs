@@ -27,7 +27,6 @@ public class Room : MonoBehaviour {
     private readonly List<PlayerDespawnData> playerDespawns = new List<PlayerDespawnData>();
 
     private readonly List<ServerBullet> serverBullets = new List<ServerBullet>();
-    private readonly List<BulletSpawnData> bulletSpawns = new List<BulletSpawnData>();
     private readonly List<BulletDespawnData> bulletDespawns = new List<BulletDespawnData>();
     private readonly Dictionary<ushort, BulletStateData> bulletStates = new Dictionary<ushort, BulletStateData>();
 
@@ -38,7 +37,7 @@ public class Room : MonoBehaviour {
         this.slots = slots;
 
         var csp = new CreateSceneParameters(LocalPhysicsMode.Physics3D);
-        scene = SceneManager.CreateScene($"room_{roomName}", csp);
+        scene = SceneManager.CreateScene($"Room_{roomName}", csp);
         
         SceneManager.MoveGameObjectToScene(gameObject, scene);
     }
@@ -111,7 +110,6 @@ public class Room : MonoBehaviour {
 
         bulletStates[bullet.Id] = bullet.Go(spawnData);
 
-        Debug.Log($"spawning bullet {spawnData.Id} at {spawnData.Position} direction {direction}");
     }
 
     public void DespawnBullet(ServerBullet bullet) {
@@ -119,7 +117,7 @@ public class Room : MonoBehaviour {
         serverBullets.Remove(bullet);
         bulletStates.Remove(bullet.Id);
         bulletDespawns.Add(new BulletDespawnData(bullet.Id));
-        Debug.Log($"despawning bullet {bullet.Id} at {bullet.transform.position}");
+        //Debug.Log($"despawning bullet {bullet.Id} at {bullet.transform.position}");
     }
 
     public void Close() {
@@ -164,7 +162,6 @@ public class Room : MonoBehaviour {
 
         // updates an alle clients schicken
         var playerStateUpdates = playerStates.ToArray();
-        var spawnDataUpdates = playerSpawns.ToArray();
         var despawnDataUpdates = playerDespawns.ToArray();
 
         var bulletStateUpdates = new BulletStateData[bulletStates.Count];
@@ -176,7 +173,7 @@ public class Room : MonoBehaviour {
             
             var updateData = new GameUpdateData(
                 p.InputTick,
-                playerStateUpdates, spawnDataUpdates, despawnDataUpdates,
+                playerStateUpdates, despawnDataUpdates,
                 bulletStateUpdates, bulletDespawnUpdates
             );
 
@@ -193,9 +190,7 @@ public class Room : MonoBehaviour {
             var bullet = requestedBullets.Dequeue();
             SpawnBullet(bullet);
         }
-
-        // spawnlisten clearen, damit nichts doppelt gespawnt wird
-        playerSpawns.Clear();
+        
         playerDespawns.Clear();
 
         bulletDespawns.Clear();
