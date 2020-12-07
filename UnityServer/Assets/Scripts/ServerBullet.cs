@@ -13,6 +13,7 @@ public class ServerBullet : MonoBehaviour {
 
     private readonly QueueBuffer<BulletInputData> inputBuffer = new QueueBuffer<BulletInputData>(1);
     private BulletInputData[] inputsToProcess;
+    
     public void Initialize(ushort id, ushort playerId, ServerPlayer owner) {
         Id = id;
         PlayerId = playerId;

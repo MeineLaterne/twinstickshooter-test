@@ -17,6 +17,8 @@ public class ClientBullet : MonoBehaviour {
 
     private readonly Queue<BulletReconciliationInfo> history = new Queue<BulletReconciliationInfo>();
 
+    private const float reconciliationTolerance = 0.05f * 0.05f;
+
     internal void Initialize(BulletSpawnData spawnData) {
         Id = spawnData.Id;
         playerId = spawnData.PlayerId;
@@ -49,7 +51,7 @@ public class ClientBullet : MonoBehaviour {
 
         var predictedState = history.Dequeue();
 
-        if (Vector3.Distance(predictedState.StateData.Position, stateData.Position) < 0.05f)
+        if ((predictedState.StateData.Position - stateData.Position).sqrMagnitude < reconciliationTolerance)
             return;
 
         //Debug.Log($"start reconciliation for frame {predictedState.InputTick}");

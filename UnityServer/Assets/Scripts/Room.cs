@@ -11,8 +11,6 @@ public class Room : MonoBehaviour {
 
     public uint ServerTick { get; private set; }
 
-    public GameObjectPool BulletPool { get; private set; }
-
     public List<ClientConnection> ClientConnections { get; } = new List<ClientConnection>();
 
     [SerializeField] private string roomName;
@@ -20,7 +18,8 @@ public class Room : MonoBehaviour {
     [SerializeField] private GameObject playerPrefab;
     
     private Scene scene;
-    
+    private GameObjectPool bulletPool;
+
     private readonly List<ServerPlayer> serverPlayers = new List<ServerPlayer>();
     private readonly List<PlayerStateData> playerStates = new List<PlayerStateData>();
     private readonly List<PlayerSpawnData> playerSpawns = new List<PlayerSpawnData>();
@@ -83,10 +82,10 @@ public class Room : MonoBehaviour {
     public void OnBulletRequest(BulletRequestData requestData) {
         if (ServerManager.Instance.Players.TryGetValue(requestData.PlayerId, out ClientConnection clientConnection)) {
             
-            var bullet = BulletPool.Obtain(true);
+            var bullet = bulletPool.Obtain(true);
             var serverBullet = bullet.GetComponent<ServerBullet>();
 
-            serverBullet.Initialize((ushort)BulletPool.LastObtainedIndex, requestData.PlayerId, clientConnection.ServerPlayer);
+            serverBullet.Initialize((ushort)bulletPool.LastObtainedIndex, requestData.PlayerId, clientConnection.ServerPlayer);
 
             requestedBullets.Enqueue(serverBullet);
 
@@ -113,7 +112,7 @@ public class Room : MonoBehaviour {
     }
 
     public void DespawnBullet(ServerBullet bullet) {
-        BulletPool.Free(bullet.gameObject);
+        bulletPool.Free(bullet.gameObject);
         serverBullets.Remove(bullet);
         bulletStates.Remove(bullet.Id);
         bulletDespawns.Add(new BulletDespawnData(bullet.Id));
@@ -138,7 +137,7 @@ public class Room : MonoBehaviour {
     }
 
     private void Awake() {
-        BulletPool = GetComponent<GameObjectPool>();
+        bulletPool = GetComponent<GameObjectPool>();
     }
 
     private void FixedUpdate() {

@@ -19,6 +19,8 @@ public class ClientPlayer : MonoBehaviour {
     private bool shotLock;
     private string playerName;
 
+    private const float reconciliationTolerance = 0.05f * 0.05f;
+
     // speichert unsere vorhergesagten Informationen zu player state und input
     private readonly Queue<ReconciliationInfo> history = new Queue<ReconciliationInfo>();
 
@@ -53,7 +55,7 @@ public class ClientPlayer : MonoBehaviour {
 
         var predictedState = history.Dequeue();
 
-        if (Vector3.Distance(predictedState.StateData.Position, playerState.Position) < 0.05f)
+        if ((predictedState.StateData.Position - playerState.Position).sqrMagnitude < reconciliationTolerance)
             return;
 
         //Debug.Log($"start reconciliation for frame {predictedState.InputTick}");
