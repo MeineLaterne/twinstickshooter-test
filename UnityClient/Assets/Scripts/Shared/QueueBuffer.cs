@@ -30,7 +30,7 @@ public class QueueBuffer<T> {
 
     public T[] Get() {
         if (elements.Count - 1 < bufferSize) {
-            return new T[0];
+            return System.Array.Empty<T>();
         }
 
         var amount = elements.Count - bufferSize;
