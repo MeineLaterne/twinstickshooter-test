@@ -48,6 +48,7 @@ public class GameManager : MonoBehaviour {
     private void OnMessage(object sender, MessageReceivedEventArgs e) {
         using (var msg = e.GetMessage()) {
             switch ((MessageTag)msg.Tag) {
+                
                 case MessageTag.GameUpdate:
                     OnGameUpdate(msg.Deserialize<GameUpdateData>());
                     break;
@@ -92,9 +93,10 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    private void UpdateClientGameState(GameUpdateData updateData) {
+    // in Parameter werden als Referenz übergeben und sind schreibgeschützt
+    private void UpdateClientGameState(in GameUpdateData updateData) {
         LastServerTick = updateData.Frame;
-
+        
         // despawn
         foreach (var despawnData in updateData.DespawnData) {
             if (players.ContainsKey(despawnData.Id)) {
