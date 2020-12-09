@@ -8,7 +8,7 @@ public class Room : MonoBehaviour {
 
     public string RoomName => roomName;
     public byte Slots => slots;
-
+    public int OpenSlots { get; private set; }
     public uint ServerTick { get; private set; }
 
     public List<ClientConnection> ClientConnections { get; } = new List<ClientConnection>();
@@ -31,10 +31,12 @@ public class Room : MonoBehaviour {
 
     private readonly Queue<ServerBullet> requestedBullets = new Queue<ServerBullet>();
 
+    private bool ready = false;
+
     public void Initialize(string roomName, byte slots) {
         this.roomName = roomName;
         this.slots = slots;
-
+        OpenSlots = slots;
         var csp = new CreateSceneParameters(LocalPhysicsMode.Physics3D);
         scene = SceneManager.CreateScene($"Room_{roomName}", csp);
         
@@ -48,6 +50,7 @@ public class Room : MonoBehaviour {
 
         clientConnection.Room = this;
         ClientConnections.Add(clientConnection);
+        OpenSlots--;
 
         using (var msg = Message.CreateEmpty((ushort)MessageTag.JoinRoomAccepted)) {
             clientConnection.client.SendMessage(msg, SendMode.Reliable);
@@ -55,6 +58,8 @@ public class Room : MonoBehaviour {
     }
 
     public void SpawnPlayer(ClientConnection clientConnection) {
+        if (ready) return;
+
         var go = Instantiate(playerPrefab, transform);
         var serverPlayer = go.GetComponent<ServerPlayer>();
         
@@ -64,10 +69,9 @@ public class Room : MonoBehaviour {
         playerStates.Add(serverPlayer.PlayerState);
         playerSpawns.Add(serverPlayer.GetSpawnData());
 
-        var spawnData = GetAllSpawnData();
-
-        using (var msg = Message.Create((ushort)MessageTag.StartGameResponse, new GameStartData(ServerTick, spawnData))) {
-            clientConnection.client.SendMessage(msg, SendMode.Reliable);
+        if (OpenSlots < 1) {
+            StartGame();
+            ready = true;
         }
     }
 
@@ -77,6 +81,7 @@ public class Room : MonoBehaviour {
         serverPlayers.Remove(clientConnection.ServerPlayer);
         playerDespawns.Add(new PlayerDespawnData(clientConnection.client.ID));
         Destroy(clientConnection.ServerPlayer.gameObject);
+        OpenSlots++;
     }
 
     public void OnBulletRequest(BulletRequestData requestData) {
@@ -134,6 +139,17 @@ public class Room : MonoBehaviour {
         }
 
         return r;
+    }
+
+    private void StartGame() {
+        var spawnData = GetAllSpawnData();
+
+        foreach (var p in serverPlayers) {
+            using (var msg = Message.Create((ushort)MessageTag.StartGameResponse, new GameStartData(ServerTick, spawnData))) {
+                p.Client.SendMessage(msg, SendMode.Reliable);
+            }
+        }
+
     }
 
     private void Awake() {

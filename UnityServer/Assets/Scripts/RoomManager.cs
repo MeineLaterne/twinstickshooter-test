@@ -44,7 +44,7 @@ public class RoomManager : MonoBehaviour {
         
         if (!rooms.TryGetValue(requestData.RoomName, out var room)) {
             canJoin = false;
-        } else if (room.ClientConnections.Count >= room.Slots) {
+        } else if (room.OpenSlots < 1) {
             canJoin = false;
         }
 
@@ -65,6 +65,7 @@ public class RoomManager : MonoBehaviour {
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        CreateRoom("DebugRoom", 1, 0);
         CreateRoom("TestRoom", 2, 0);
     }
 
