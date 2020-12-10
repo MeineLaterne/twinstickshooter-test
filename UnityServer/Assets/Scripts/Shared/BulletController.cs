@@ -4,31 +4,29 @@
 public class BulletController : MonoBehaviour {
 
     internal event System.Action<Vector3> VelocityChanged;
-    
+    internal CharacterController Controller { get; private set; }
+
     [SerializeField] private float movementSpeed;
-
-    private CharacterController characterController;
-
     private Vector3 velocity;
 
     internal void ResetTo(BulletStateData stateData) {
-        characterController.enabled = false;
+        Controller.enabled = false;
 
         transform.localPosition = stateData.Position;
 
-        characterController.enabled = true;
+        Controller.enabled = true;
     }
 
     public BulletStateData GetNextFrameData(BulletInputData inputData, BulletStateData currentState) {
         velocity = new Vector3(inputData.MovementAxes.x, 0, inputData.MovementAxes.y) * movementSpeed * Time.fixedDeltaTime;
         
-        characterController.Move(velocity);
+        Controller.Move(velocity);
         
         return new BulletStateData(currentState.Id, currentState.PlayerId, inputData.InputTick, transform.localPosition);
     }
 
     private void Awake() {
-        characterController = GetComponent<CharacterController>();
+        Controller = GetComponent<CharacterController>();
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit) {

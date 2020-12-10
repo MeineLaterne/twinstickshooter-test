@@ -9,7 +9,11 @@ public class ServerPlayer : MonoBehaviour {
     public PlayerController PlayerController { get; private set; }
     public uint InputTick { get; private set; }
     public PlayerStateData PlayerState { get; private set; }
-    public GunPointData GunPointState { get; private set; }
+    public GunPointData GunPointState => new GunPointData {
+        Position = gunPoint.position,
+        Direction = transform.forward
+    };
+
     public List<PlayerStateData> History { get; } = new List<PlayerStateData>();
     public List<GunPointData> GunPointHistory { get; } = new List<GunPointData>();
     public IClient Client => clientConnection.client;
@@ -38,7 +42,6 @@ public class ServerPlayer : MonoBehaviour {
         InputTick = 0;
         
         PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
-
     }
 
     public void ReceiveInput(PlayerInputData inputData) => inputBuffer.Add(inputData);
@@ -65,11 +68,6 @@ public class ServerPlayer : MonoBehaviour {
         transform.localPosition = PlayerState.Position;
         transform.localRotation = PlayerState.Rotation;
 
-        GunPointState = new GunPointData {
-            Position = gunPoint.position,
-            Direction = transform.forward
-        };
-
         return PlayerState;
     }
 
@@ -83,9 +81,7 @@ public class ServerPlayer : MonoBehaviour {
     }
 
     internal void RemoveBullet(ushort bulletId) {
-        if (bullets.ContainsKey(bulletId)) {
-            bullets.Remove(bulletId);
-        }
+        bullets.Remove(bulletId);
     }
 
     private void Awake() {

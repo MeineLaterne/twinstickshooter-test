@@ -145,16 +145,14 @@ public class GameManager : MonoBehaviour {
             );
             bullet.Initialize(spawnData);
             activeBullets.Add(spawnData.Id, bullet);
-            Debug.Log($"spawning bullet: {bullet.Id} at {go.transform.position}\nplayer position: {p.transform.position}");
         }
-        
     }
 
     private void DespawnBullet(ushort bulletId) {
         if (activeBullets.TryGetValue(bulletId, out ClientBullet bullet)) {
+            Debug.Log($"despawning bullet {bulletId}");
             bulletPool.Free(bullet.gameObject);
             activeBullets.Remove(bulletId);
-            Debug.Log($"despawning bullet {bulletId} at {bullet.transform.position}");
         }
     }
 

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Net;
 using DarkRift.Client.Unity;
 using UnityEngine;
@@ -16,7 +18,27 @@ public class ConnectionManager : MonoBehaviour {
     [SerializeField] private string ipAddress;
     [SerializeField] private int port;
 
-    
+    private Process serverProcess;
+
+    public void TryConnect() {
+        Client.ConnectInBackground(IPAddress.Parse(ipAddress), port, true, OnConnectionResponse);
+    }
+
+    public void TryStartServer() {
+        var serverPath = Directory.GetCurrentDirectory().Replace("UnityClient", @"UnityServer\Build\UnityServer.exe");
+
+        if (File.Exists(serverPath)) {
+            serverProcess = Process.Start(serverPath, "-batchmode -nographics");
+
+            if (serverProcess == null || serverProcess.HasExited == true) {
+                UnityEngine.Debug.Log("failed to start server");
+                return;
+            }
+
+            UnityEngine.Debug.Log("server running");
+        }
+    }
+
     private void Awake() {
         if (Instance != null) {
             Destroy(gameObject);
@@ -31,7 +53,7 @@ public class ConnectionManager : MonoBehaviour {
     private void OnConnectionResponse(Exception e) {
         switch (Client.ConnectionState) {
             case DarkRift.ConnectionState.Connecting:
-                Debug.Log("connecting...");
+                UnityEngine.Debug.Log("connecting...");
                 break;
 
             case DarkRift.ConnectionState.Connected:
@@ -42,13 +64,18 @@ public class ConnectionManager : MonoBehaviour {
                 break;
 
             default:
-                Debug.LogError($"failed to connect to {ipAddress}:{port}");
+                UnityEngine.Debug.LogError($"failed to connect to {ipAddress}:{port}");
                 break;
             
         }
     }
 
-    public void TryConnect() {
-        Client.ConnectInBackground(IPAddress.Parse(ipAddress), port, true, OnConnectionResponse);
+    private void OnDestroy() {
+        if (serverProcess != null) {
+            serverProcess.Kill();
+            serverProcess.WaitForExit();
+            serverProcess.Dispose();
+        }
     }
+
 }

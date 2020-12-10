@@ -10,14 +10,16 @@ public class ClientBullet : MonoBehaviour {
     internal Vector3 Direction { get; private set; }
 
     private bool isLocal;
+    private bool isInitialized;
     private ushort playerId;
     private BulletController bulletController;
     private StateInterpolation<BulletStateData> interpolation;
     private IInputReader<BulletInputData> inputReader;
-
+    
+    private const float reconciliationTolerance = 0.05f * 0.05f;
     private readonly Queue<BulletReconciliationInfo> history = new Queue<BulletReconciliationInfo>();
 
-    private const float reconciliationTolerance = 0.05f * 0.05f;
+    
 
     internal void Initialize(BulletSpawnData spawnData) {
         Id = spawnData.Id;
@@ -30,10 +32,15 @@ public class ClientBullet : MonoBehaviour {
 
         interpolation.Initialize(new BulletStateData(Id, playerId, 0, spawnData.Position));
 
-        GetComponent<CharacterController>().enabled = true;
+        bulletController.Controller.enabled = true;
+
+        isInitialized = true;
     }
 
     internal void UpdateBulletState(BulletStateData stateData) {
+        if (!isInitialized) {
+            return;
+        }
         if (!isLocal) {
             interpolation.PushStateData(stateData);
             return;
@@ -75,19 +82,24 @@ public class ClientBullet : MonoBehaviour {
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit) {
-        if (!hit.collider.CompareTag("Obstacle")) {
-            Disable();
-        }
-
+        
         if (hit.collider.CompareTag("Bullet")) {
             var otherBullet = hit.collider.gameObject.GetComponent<ClientBullet>();
             otherBullet.Disable();
         }
+
+        if (!hit.collider.CompareTag("Obstacle")) {
+            Disable();
+        }
+
     }
 
     private void Disable() {
-        GetComponent<CharacterController>().enabled = false;
-        Direction = Vector3.zero;
+        if (!isInitialized) return;
+        Debug.Log($"bullet {Id} Disable");
+
+        isInitialized = false;
+        bulletController.Controller.enabled = false;
         transform.position = new Vector3(1000, 1000, 1000);
     }
 
@@ -104,23 +116,21 @@ public class ClientBullet : MonoBehaviour {
 
         var inputData = inputReader.ReadInput();
 
-        bulletController.ResetTo(interpolation.CurrentStateData);
-
-        var nextStateData = bulletController.GetNextFrameData(inputData, interpolation.CurrentStateData);
-
-        interpolation.PushStateData(nextStateData);
-
-        //Debug.Log($"FixedUpdate: interpolation from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
-
+        if (isInitialized) {
+            bulletController.ResetTo(interpolation.CurrentStateData);
+            var nextStateData = bulletController.GetNextFrameData(inputData, interpolation.CurrentStateData);
+            interpolation.PushStateData(nextStateData);
+            history.Enqueue(new BulletReconciliationInfo(nextStateData.InputTick, nextStateData, inputData));
+        }
+        
         using (var msg = Message.Create((ushort)MessageTag.BulletInput, inputData)) {
             ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
         }
-
-        history.Enqueue(new BulletReconciliationInfo(nextStateData.InputTick, nextStateData, inputData));
     }
 
     private void Update() {
-        interpolation.Interpolate();
+        if (isInitialized) 
+            interpolation.Interpolate();
     }
 
     private void OnDisable() {

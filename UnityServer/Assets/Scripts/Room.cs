@@ -121,7 +121,7 @@ public class Room : MonoBehaviour {
         serverBullets.Remove(bullet);
         bulletStates.Remove(bullet.Id);
         bulletDespawns.Add(new BulletDespawnData(bullet.Id));
-        //Debug.Log($"despawning bullet {bullet.Id} at {bullet.transform.position}");
+       // Debug.Log($"despawning bullet {bullet.Id} at {bullet.transform.position}");
     }
 
     public void Close() {

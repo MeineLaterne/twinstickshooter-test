@@ -15,6 +15,7 @@ public class ServerBullet : MonoBehaviour {
     private BulletInputData[] inputsToProcess;
     
     public void Initialize(ushort id, ushort playerId, ServerPlayer owner) {
+        //Debug.Log($"bullet {Id} Initialize");
         Id = id;
         PlayerId = playerId;
         Owner = owner;
@@ -22,11 +23,13 @@ public class ServerBullet : MonoBehaviour {
     }
 
     public BulletStateData Go(BulletSpawnData spawnData) {
+        //Debug.Log($"bullet {Id} Go");
+
         BulletState = new BulletStateData(Id, PlayerId, 0, spawnData.Position);
         bulletController.ResetTo(BulletState);
 
         Owner.AddBullet(this);
-
+        
         return BulletState;
     }
 
@@ -49,28 +52,32 @@ public class ServerBullet : MonoBehaviour {
     }
 
     private void OnDisable() {
+        //Debug.Log($"bullet {Id} OnDisable");
         if (Owner != null) {
             Owner.RemoveBullet(Id);
             Owner = null;
         }
         inputBuffer.Clear();
-        GetComponent<CharacterController>().enabled = false;
     }
 
     private void Disable() {
+        //Debug.Log($"bullet {Id} Disable");
         Owner.RemoveBullet(Id);
         Owner.Room.DespawnBullet(this);
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit) {
+
+        if (hit.collider.CompareTag("Bullet")) {
+            var otherBullet = hit.collider.gameObject.GetComponent<ServerBullet>();
+            //Debug.Log($"bullet {Id} hit {otherBullet.Id}");
+            otherBullet.Disable();
+        }
+
         if (!hit.collider.CompareTag("Obstacle")) {
             Disable();
         }
 
-        if (hit.collider.CompareTag("Bullet")) {
-            var otherBullet = hit.collider.gameObject.GetComponent<ServerBullet>();
-            otherBullet.Disable();
-        }
     }
 
 }
