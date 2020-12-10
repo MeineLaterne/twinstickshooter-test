@@ -151,7 +151,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   roomPrefabs:
-  - {fileID: 4323433142207183944, guid: c4a1ea5199f9f054e9ce8be60062c4c2, type: 3}
+  - {fileID: 5165171052004757877, guid: 955c9471c2d50024faf2d2ceef259edc, type: 3}
 --- !u!4 &421952426
 Transform:
   m_ObjectHideFlags: 0

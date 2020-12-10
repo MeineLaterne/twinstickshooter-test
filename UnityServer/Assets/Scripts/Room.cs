@@ -16,7 +16,10 @@ public class Room : MonoBehaviour {
     [SerializeField] private string roomName;
     [SerializeField] private byte slots;
     [SerializeField] private GameObject playerPrefab;
-    
+    [SerializeField] private GameObject[] mapPrefabs;
+
+    private int currentMapIndex;
+    private GameObject currentMap;
     private Scene scene;
     private GameObjectPool bulletPool;
 
@@ -37,9 +40,13 @@ public class Room : MonoBehaviour {
         this.roomName = roomName;
         this.slots = slots;
         OpenSlots = slots;
+
         var csp = new CreateSceneParameters(LocalPhysicsMode.Physics3D);
-        scene = SceneManager.CreateScene($"Room_{roomName}", csp);
-        
+        scene = SceneManager.CreateScene(roomName, csp);
+
+        currentMap = Instantiate(mapPrefabs[currentMapIndex]);
+
+        SceneManager.MoveGameObjectToScene(currentMap, scene);
         SceneManager.MoveGameObjectToScene(gameObject, scene);
     }
 
