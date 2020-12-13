@@ -6,7 +6,9 @@ using UnityEngine;
 [RequireComponent(typeof(IInputReader<PlayerInputData>))]
 public class ClientPlayer : MonoBehaviour {
 
-    public Transform GunPoint => gunPoint;
+    internal Transform GunPoint => gunPoint;
+
+    internal event System.Action<ushort> BulletHit;
 
     [SerializeField] private Transform gunPoint;
 
@@ -24,19 +26,23 @@ public class ClientPlayer : MonoBehaviour {
     // speichert unsere vorhergesagten Informationen zu player state und input
     private readonly Queue<ReconciliationInfo> history = new Queue<ReconciliationInfo>();
 
-    public void Initialize(ushort id, string playerName) {
+    internal void Initialize(ushort id, string playerName, Vector3 position) {
         this.id = id;
         this.playerName = playerName;
 
-        interpolation = new StateInterpolation<PlayerStateData>(new PlayerStateInterpolator(transform));
+        isLocalPlayer = this.id == ConnectionManager.Instance.PlayerId;
 
-        if (this.id == ConnectionManager.Instance.PlayerId) {
-            isLocalPlayer = true;
-            interpolation.CurrentStateData = new PlayerStateData(this.id, 0, Vector3.zero, Quaternion.identity);
-        }
+        interpolation = new StateInterpolation<PlayerStateData>(new PlayerStateInterpolator(transform));
+        
+        Teleport(position);
     }
 
-    public void UpdatePlayerState(PlayerStateData playerState) {
+    internal void Teleport(Vector3 position) {
+        interpolation.Initialize(new PlayerStateData(id, 0, position, Quaternion.identity));
+        transform.position = position;
+    }
+
+    internal void UpdatePlayerState(PlayerStateData playerState) {
         if (!isLocalPlayer) {
             interpolation.PushStateData(playerState);
             return;
@@ -76,6 +82,10 @@ public class ClientPlayer : MonoBehaviour {
                 //Debug.Log($"moved from {interpolation.PreviousStateData.Position} to {interpolation.CurrentStateData.Position}");
             }
         }
+    }
+
+    internal void OnBulletHit() {
+        BulletHit?.Invoke(id);
     }
 
     private void Awake() {

@@ -10,6 +10,7 @@ public class Room : MonoBehaviour {
     public byte Slots => slots;
     public int OpenSlots { get; private set; }
     public uint ServerTick { get; private set; }
+    public bool IsRunning { get; private set; }
 
     public List<ClientConnection> ClientConnections { get; } = new List<ClientConnection>();
 
@@ -18,10 +19,14 @@ public class Room : MonoBehaviour {
     [SerializeField] private GameObject playerPrefab;
     [SerializeField] private GameObject[] mapPrefabs;
 
+    private byte rounds;
     private int currentMapIndex;
+    private int seed;
+    private int[] mapOrder;
     private GameObject currentMap;
     private Scene scene;
     private GameObjectPool bulletPool;
+    
 
     private readonly List<ServerPlayer> serverPlayers = new List<ServerPlayer>();
     private readonly List<PlayerStateData> playerStates = new List<PlayerStateData>();
@@ -31,23 +36,37 @@ public class Room : MonoBehaviour {
     private readonly List<ServerBullet> serverBullets = new List<ServerBullet>();
     private readonly List<BulletDespawnData> bulletDespawns = new List<BulletDespawnData>();
     private readonly Dictionary<ushort, BulletStateData> bulletStates = new Dictionary<ushort, BulletStateData>();
-
+    private readonly Queue<Vector3> spawnPoints = new Queue<Vector3>();
     private readonly Queue<ServerBullet> requestedBullets = new Queue<ServerBullet>();
 
     private bool ready = false;
 
-    public void Initialize(string roomName, byte slots) {
+    public void Initialize(string roomName, byte slots, byte rounds) {
         this.roomName = roomName;
         this.slots = slots;
+        this.rounds = rounds;
         OpenSlots = slots;
+
+        seed = (int)(Random.value * int.MaxValue);
+
+        Random.InitState(seed);
+        
+        mapOrder = new int[rounds];
+        currentMapIndex = 0;
+        
+        for (var i = 0; i < rounds; i++) {
+            mapOrder[i] = Mathf.RoundToInt((mapPrefabs.Length - 1) * Random.value);
+        }
 
         var csp = new CreateSceneParameters(LocalPhysicsMode.Physics3D);
         scene = SceneManager.CreateScene(roomName, csp);
 
-        currentMap = Instantiate(mapPrefabs[currentMapIndex]);
+        currentMap = Instantiate(mapPrefabs[mapOrder[currentMapIndex]]);
 
         SceneManager.MoveGameObjectToScene(currentMap, scene);
         SceneManager.MoveGameObjectToScene(gameObject, scene);
+
+        QueueSpawnPoints(currentMap.transform.Find("SpawnPoints"));
     }
 
     public void AddPlayer(ClientConnection clientConnection) {
@@ -64,13 +83,24 @@ public class Room : MonoBehaviour {
         }
     }
 
-    public void SpawnPlayer(ClientConnection clientConnection) {
+    public void RemovePlayer(ClientConnection clientConnection) {
+        clientConnection.Room = null;
+        ClientConnections.Remove(clientConnection);
+        serverPlayers.Remove(clientConnection.ServerPlayer);
+        playerDespawns.Add(new PlayerDespawnData(clientConnection.client.ID));
+        Destroy(clientConnection.ServerPlayer.gameObject);
+        OpenSlots++;
+        ready = OpenSlots < 1;
+    }
+
+    internal void SpawnPlayer(ClientConnection clientConnection) {
         if (ready) return;
 
         var go = Instantiate(playerPrefab, transform);
         var serverPlayer = go.GetComponent<ServerPlayer>();
-        
-        serverPlayer.Initialize(Vector3.zero, clientConnection);
+        var playerPos = spawnPoints.Dequeue();
+
+        serverPlayer.Initialize(playerPos, clientConnection);
         
         serverPlayers.Add(serverPlayer);
         playerStates.Add(serverPlayer.PlayerState);
@@ -82,16 +112,29 @@ public class Room : MonoBehaviour {
         }
     }
 
-    public void RemovePlayer(ClientConnection clientConnection) {
-        clientConnection.Room = null;
-        ClientConnections.Remove(clientConnection);
-        serverPlayers.Remove(clientConnection.ServerPlayer);
-        playerDespawns.Add(new PlayerDespawnData(clientConnection.client.ID));
-        Destroy(clientConnection.ServerPlayer.gameObject);
-        OpenSlots++;
+    internal void DespawnPlayer(ServerPlayer player) {
+
+        if (serverPlayers.Count - 1 < 2) {
+            EndRound();
+        }
+
+        if (serverPlayers.Remove(player)) {
+            playerStates.Clear();
+            player.gameObject.SetActive(false);
+        }
+    }
+    
+    internal void OnStartRoundRequest(ClientConnection clientConnection) {
+        if (ClientConnections.Contains(clientConnection)) {
+            serverPlayers.Add(clientConnection.ServerPlayer);
+            
+            if (serverPlayers.Count == slots) {
+                StartNextRound();
+            }
+        }
     }
 
-    public void OnBulletRequest(BulletRequestData requestData) {
+    internal void OnBulletRequest(BulletRequestData requestData) {
         if (ServerManager.Instance.Players.TryGetValue(requestData.PlayerId, out ClientConnection clientConnection)) {
             
             var bullet = bulletPool.Obtain(true);
@@ -148,15 +191,88 @@ public class Room : MonoBehaviour {
         return r;
     }
 
-    private void StartGame() {
-        var spawnData = GetAllSpawnData();
+    private void StartNextRound() {
+
+        QueueSpawnPoints(currentMap.transform.Find("SpawnPoints"));
 
         foreach (var p in serverPlayers) {
-            using (var msg = Message.Create((ushort)MessageTag.StartGameResponse, new GameStartData(ServerTick, spawnData))) {
+            var pos = spawnPoints.Dequeue();
+            p.Teleport(pos);
+        }
+
+        var spawnData = GetAllSpawnData();
+        foreach (var p in serverPlayers) {
+
+            playerStates.Add(p.PlayerState);
+
+            using (var msg = Message.Create((ushort)MessageTag.RoundStart, new RoundStartData(spawnData))) {
                 p.Client.SendMessage(msg, SendMode.Reliable);
             }
         }
 
+        IsRunning = true;
+    }
+
+    private void EndRound() {
+
+        currentMapIndex++;
+
+        if (currentMapIndex < mapOrder.Length) {
+            var previousMap = GameObject.FindGameObjectWithTag("Map");
+            Destroy(previousMap);
+
+            currentMap = Instantiate(mapPrefabs[mapOrder[currentMapIndex]]);
+            SceneManager.MoveGameObjectToScene(currentMap, scene);
+
+            
+        } else {
+            // Spiel vorbei
+            Debug.Log("game over");
+            Close();
+        }
+
+        serverPlayers.Clear();
+        playerStates.Clear();
+
+        var bullets = GameObject.FindGameObjectsWithTag("Bullet");
+        
+        foreach (var b in bullets) {
+            var sb = b.GetComponent<ServerBullet>();
+            if (serverBullets.Contains(sb)) {
+                sb.Disable();
+            }
+        }
+
+        serverBullets.Clear();
+        bulletStates.Clear();
+
+        foreach (var cc in ClientConnections) {
+            using (var msg = Message.Create((ushort)MessageTag.RoundEnd, new RoundEndData(0, 0, bulletDespawns.ToArray()))) {
+                cc.client.SendMessage(msg, SendMode.Reliable);
+            }
+        }
+
+        IsRunning = false;
+    }
+
+    private void StartGame() {
+        var spawnData = GetAllSpawnData();
+
+        foreach (var p in serverPlayers) {
+            using (var msg = Message.Create((ushort)MessageTag.StartGameResponse, new GameStartData(ServerTick, seed, spawnData))) {
+                p.Client.SendMessage(msg, SendMode.Reliable);
+            }
+        }
+
+        IsRunning = true;
+    }
+
+    private void QueueSpawnPoints(Transform spawnPointContainer) {
+        Debug.Log($"fetching spawnpoints from {spawnPointContainer.gameObject.name}");
+        for (int i = 0; i < spawnPointContainer.childCount; i++) {
+            var pos = spawnPointContainer.GetChild(i).position;
+            spawnPoints.Enqueue(pos);
+        }
     }
 
     private void Awake() {
@@ -164,6 +280,8 @@ public class Room : MonoBehaviour {
     }
 
     private void FixedUpdate() {
+        if (!IsRunning) return;
+
         ServerTick++;
 
         foreach (var p in serverPlayers) {

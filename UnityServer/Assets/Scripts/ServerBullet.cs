@@ -47,6 +47,11 @@ public class ServerBullet : MonoBehaviour {
 
     public void ReceiveInput(BulletInputData inputData) => inputBuffer.Add(inputData);
 
+    internal void Disable() {
+        Owner.RemoveBullet(Id);
+        Owner.Room.DespawnBullet(this);
+    }
+
     private void Awake() {
         bulletController = GetComponent<BulletController>();
     }
@@ -59,13 +64,7 @@ public class ServerBullet : MonoBehaviour {
         }
         inputBuffer.Clear();
     }
-
-    private void Disable() {
-        //Debug.Log($"bullet {Id} Disable");
-        Owner.RemoveBullet(Id);
-        Owner.Room.DespawnBullet(this);
-    }
-
+    
     private void OnControllerColliderHit(ControllerColliderHit hit) {
 
         if (hit.collider.CompareTag("Bullet")) {
@@ -74,8 +73,11 @@ public class ServerBullet : MonoBehaviour {
             otherBullet.Disable();
         }
 
-        if (!hit.collider.CompareTag("Obstacle")) {
+        if (hit.collider.CompareTag("Player")) {
             Disable();
+
+            var player = hit.collider.gameObject.GetComponent<ServerPlayer>();
+            player.OnBulletHit();
         }
 
     }

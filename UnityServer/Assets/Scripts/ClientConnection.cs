@@ -39,7 +39,11 @@ public class ClientConnection {
                 case MessageTag.BulletRequest:
                     Room.OnBulletRequest(m.Deserialize<BulletRequestData>());
                     break;
-                
+
+                case MessageTag.StartRoundRequest:
+                    Room.OnStartRoundRequest(this);
+                    break;
+
                 case MessageTag.JoinRoomRequest:
                     RoomManager.Instance.TryJoinRoom(client, m.Deserialize<JoinRoomRequestData>());
                     break;

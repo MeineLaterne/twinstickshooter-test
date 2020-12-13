@@ -6,17 +6,16 @@ public class RoomManager : MonoBehaviour {
 
     public static RoomManager Instance { get; private set; }
 
-    [SerializeField] private GameObject[] roomPrefabs;
+    [SerializeField] private GameObject roomPrefab;
 
     private readonly Dictionary<string, Room> rooms = new Dictionary<string, Room>();
 
-    public void CreateRoom(string name, byte slots, int prefabIdx) {
+    public void CreateRoom(string name, byte slots, byte rounds) {
 
-        prefabIdx %= roomPrefabs.Length;
-
-        var go = Instantiate(roomPrefabs[prefabIdx]);
+        var go = Instantiate(roomPrefab);
         var room = go.GetComponent<Room>();
-        room.Initialize(name, slots);
+
+        room.Initialize(name, slots, rounds);
 
         rooms.Add(name, room);
     }
@@ -44,7 +43,9 @@ public class RoomManager : MonoBehaviour {
         
         if (!rooms.TryGetValue(requestData.RoomName, out var room)) {
             canJoin = false;
-        } else if (room.OpenSlots < 1) {
+        } 
+        
+        if (room.OpenSlots < 1) {
             canJoin = false;
         }
 
@@ -65,8 +66,8 @@ public class RoomManager : MonoBehaviour {
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        CreateRoom("DebugRoom", 1, 0);
-        CreateRoom("TestRoom", 2, 0);
+        CreateRoom("DebugRoom", 1, 4);
+        //CreateRoom("TestRoom", 2, 0);
     }
 
 }

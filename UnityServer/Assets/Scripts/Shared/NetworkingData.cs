@@ -15,6 +15,10 @@ public enum MessageTag : ushort {
     StartGameRequest = 202,
     StartGameResponse = 203,
     
+    RoundStart = 204,
+    RoundEnd = 205,
+    StartRoundRequest = 206,
+
     BulletRequest = 300,
     BulletResponse = 301,
     BulletUpdate = 302,
@@ -261,20 +265,24 @@ public struct GameUpdateData : IDarkRiftSerializable {
 public struct GameStartData : IDarkRiftSerializable {
 
     public uint ServerTick;
+    public int Seed;
     public PlayerSpawnData[] Players;
 
-    public GameStartData(uint serverTick, PlayerSpawnData[] players) {
+    public GameStartData(uint serverTick, int seed, PlayerSpawnData[] players) {
         ServerTick = serverTick;
+        Seed = seed;
         Players = players;
     }
-    
+
     public void Deserialize(DeserializeEvent e) {
         ServerTick = e.Reader.ReadUInt32();
+        Seed = e.Reader.ReadInt32();
         Players = e.Reader.ReadSerializables<PlayerSpawnData>();
     }
 
     public void Serialize(SerializeEvent e) {
         e.Writer.Write(ServerTick);
+        e.Writer.Write(Seed);
         e.Writer.Write(Players);
     }
 }
@@ -441,5 +449,47 @@ public struct BulletInputData : IDarkRiftSerializable {
         e.Writer.Write(InputTick);
         e.Writer.Write(MovementAxes.x);
         e.Writer.Write(MovementAxes.y);
+    }
+}
+
+public struct RoundStartData : IDarkRiftSerializable {
+
+    public PlayerSpawnData[] Players;
+
+    public RoundStartData(PlayerSpawnData[] players) {
+        Players = players;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        Players = e.Reader.ReadSerializables<PlayerSpawnData>();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(Players);
+    }
+}
+
+public struct RoundEndData : IDarkRiftSerializable {
+
+    public ushort WinnerId;
+    public byte RoundsLeft;
+    public BulletDespawnData[] BulletDespawns;
+
+    public RoundEndData(ushort winnerId, byte roundsLeft, BulletDespawnData[] bulletDespawns) {
+        WinnerId = winnerId;
+        RoundsLeft = roundsLeft;
+        BulletDespawns = bulletDespawns;
+    }
+
+    public void Deserialize(DeserializeEvent e) {
+        WinnerId = e.Reader.ReadUInt16();
+        RoundsLeft = e.Reader.ReadByte();
+        BulletDespawns = e.Reader.ReadSerializables<BulletDespawnData>();
+    }
+
+    public void Serialize(SerializeEvent e) {
+        e.Writer.Write(WinnerId);
+        e.Writer.Write(RoundsLeft);
+        e.Writer.Write(BulletDespawns);
     }
 }

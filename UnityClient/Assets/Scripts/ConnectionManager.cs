@@ -5,6 +5,9 @@ using System.Net;
 using DarkRift.Client.Unity;
 using UnityEngine;
 
+/// <summary>
+/// ConnectionManager ist ein Singleton, der sich
+/// </summary>
 [RequireComponent(typeof(UnityClient))]
 public class ConnectionManager : MonoBehaviour {
     public static ConnectionManager Instance { get; private set; }

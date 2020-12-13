@@ -20,7 +20,6 @@ public class ClientBullet : MonoBehaviour {
     private readonly Queue<BulletReconciliationInfo> history = new Queue<BulletReconciliationInfo>();
 
     
-
     internal void Initialize(BulletSpawnData spawnData) {
         Id = spawnData.Id;
         playerId = spawnData.PlayerId;
@@ -46,12 +45,12 @@ public class ClientBullet : MonoBehaviour {
             return;
         }
 
-        if (history.Count == 0)
-            return;
-
         while (history.Count > 0 && history.Peek().InputTick < stateData.InputTick) {
             history.Dequeue();
         }
+
+        if (history.Count == 0)
+            return;
 
         if (history.Peek().InputTick != stateData.InputTick)
             return;
@@ -86,9 +85,12 @@ public class ClientBullet : MonoBehaviour {
         if (hit.collider.CompareTag("Bullet")) {
             var otherBullet = hit.collider.gameObject.GetComponent<ClientBullet>();
             otherBullet.Disable();
+            return;
         }
 
-        if (!hit.collider.CompareTag("Obstacle")) {
+        if (hit.collider.CompareTag("Player")) {
+            var player = hit.collider.gameObject.GetComponent<ClientPlayer>();
+            player.OnBulletHit();
             Disable();
         }
 

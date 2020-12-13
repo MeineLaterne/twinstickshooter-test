@@ -28,23 +28,28 @@ public class ServerPlayer : MonoBehaviour {
     private readonly QueueBuffer<PlayerInputData> inputBuffer = new QueueBuffer<PlayerInputData>(1);
     private PlayerInputData[] inputsToProcess;
 
-    private bool shotLock;
-
     public struct GunPointData {
         public Vector3 Position;
         public Vector3 Direction;
     }
 
-    public void Initialize(Vector3 position, ClientConnection clientConnection) {
+    internal void Initialize(Vector3 position, ClientConnection clientConnection) {
         this.clientConnection = clientConnection;
         this.clientConnection.ServerPlayer = this;
 
         InputTick = 0;
         
         PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
+
+        transform.position = position;
     }
 
-    public void ReceiveInput(PlayerInputData inputData) => inputBuffer.Add(inputData);
+    internal void Teleport(Vector3 position) {
+        PlayerState = new PlayerStateData(clientConnection.client.ID, 0, position, Quaternion.identity);
+        transform.position = position;
+    }
+
+    internal void ReceiveInput(PlayerInputData inputData) => inputBuffer.Add(inputData);
 
     internal void ReceiveBulletInput(BulletInputData inputData) {
         if (bullets.TryGetValue(inputData.Id, out ServerBullet bullet)) {
@@ -52,11 +57,11 @@ public class ServerPlayer : MonoBehaviour {
         }
     }
 
-    public void PlayerPreUpdate() {
+    internal void PlayerPreUpdate() {
         inputsToProcess = inputBuffer.Get();
     }
 
-    public PlayerStateData PlayerUpdate() {
+    internal PlayerStateData PlayerUpdate() {
         
         var shoot = false;
         foreach (var inputData in inputsToProcess) {
@@ -82,6 +87,10 @@ public class ServerPlayer : MonoBehaviour {
 
     internal void RemoveBullet(ushort bulletId) {
         bullets.Remove(bulletId);
+    }
+
+    internal void OnBulletHit() {
+        Room.DespawnPlayer(this);
     }
 
     private void Awake() {

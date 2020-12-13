@@ -11,10 +11,18 @@ public class GameManager : MonoBehaviour {
     internal uint LastServerTick { get; private set; }
 
     [SerializeField] private GameObject[] playerPrefabs;
+    [SerializeField] private GameObject[] mapPrefabs;
+
+    private int rounds = 8;
+    private int currentMapIndex;
+    private int[] mapOrder;
+    private GameObject currentMap;
 
     private GameObjectPool bulletPool;
 
-    private readonly Dictionary<ushort, ClientPlayer> players = new Dictionary<ushort, ClientPlayer>();
+    private readonly Dictionary<ushort, ClientPlayer> activePlayers = new Dictionary<ushort, ClientPlayer>();
+    private readonly Dictionary<ushort, ClientPlayer> inactivePlayers = new Dictionary<ushort, ClientPlayer>();
+    
     private readonly Dictionary<ushort, ClientBullet> activeBullets = new Dictionary<ushort, ClientBullet>();
 
     private readonly Queue<BulletResponseData> bulletResponses = new Queue<BulletResponseData>();
@@ -57,6 +65,14 @@ public class GameManager : MonoBehaviour {
                     OnBulletResponse(msg.Deserialize<BulletResponseData>());
                     break;
 
+                case MessageTag.RoundStart:
+                    OnRoundStart(msg.Deserialize<RoundStartData>());
+                    break;
+                
+                case MessageTag.RoundEnd:
+                    OnRoundEnd(msg.Deserialize<RoundEndData>());
+                    break;
+
                 case MessageTag.StartGameResponse:
                     OnGameStart(msg.Deserialize<GameStartData>());
                     break;
@@ -69,7 +85,17 @@ public class GameManager : MonoBehaviour {
         LastServerTick = startData.ServerTick;
         ClientTick = startData.ServerTick;
 
-        Debug.Log($"starting game with {startData.Players.Length} players");
+        // Mapreihenfolge festlegen
+        Random.InitState(startData.Seed);
+        
+        mapOrder = new int[rounds];
+        currentMapIndex = 0;
+
+        for (int i = 0; i < rounds; i++) {
+            mapOrder[i] = Mathf.RoundToInt((mapPrefabs.Length - 1) * Random.value);
+        }
+
+        currentMap = Instantiate(mapPrefabs[mapOrder[currentMapIndex]]);
 
         foreach (var spawnData in startData.Players) {
             SpawnPlayer(spawnData);
@@ -77,6 +103,40 @@ public class GameManager : MonoBehaviour {
     }
 
     private void OnGameUpdate(GameUpdateData updateData) => buffer.Add(updateData);
+
+    private void OnRoundStart(RoundStartData roundStartData) {
+        foreach (var spawnData in roundStartData.Players) {
+            if (inactivePlayers.TryGetValue(spawnData.Id, out ClientPlayer p)) {
+                inactivePlayers.Remove(spawnData.Id);
+                activePlayers.Add(spawnData.Id, p);
+                p.gameObject.SetActive(true);
+                p.Teleport(spawnData.Position);
+            }
+        }
+    }
+
+    private void OnRoundEnd(RoundEndData roundEndData) {
+        Debug.Log($"round {rounds - roundEndData.RoundsLeft} was won by player {roundEndData.WinnerId}");
+
+        // verbleibende bullets clearen
+        foreach (var bulletDespawn in roundEndData.BulletDespawns) {
+            DespawnBullet(bulletDespawn.Id);
+        }
+        
+        // nächste map laden
+        currentMapIndex++;
+        if (currentMapIndex < mapOrder.Length) {
+            var previousMap = GameObject.FindGameObjectWithTag("Map");
+            Destroy(previousMap);
+
+            currentMap = Instantiate(mapPrefabs[mapOrder[currentMapIndex]]);
+
+            // dem server sagen, dass wir ready für die nächste runde sind
+            using (var msg = Message.CreateEmpty((ushort)MessageTag.StartRoundRequest)) {
+                ConnectionManager.Instance.Client.SendMessage(msg, SendMode.Reliable);
+            }
+        }
+    }
 
     private void FixedUpdate() {
         //Debug.Log($"GameManager:FixedUpdate {ClientTick}");
@@ -99,10 +159,7 @@ public class GameManager : MonoBehaviour {
         
         // despawn
         foreach (var despawnData in updateData.DespawnData) {
-            if (players.ContainsKey(despawnData.Id)) {
-                Destroy(players[despawnData.Id].gameObject);
-                players.Remove(despawnData.Id);
-            }
+            DespawnPlayer(despawnData.Id);
         }
 
         foreach (var bulletDespawnData in updateData.BulletDespawns) {
@@ -111,7 +168,7 @@ public class GameManager : MonoBehaviour {
         
         // update
         foreach (var playerState in updateData.PlayerStates) {
-            if (players.TryGetValue(playerState.Id, out ClientPlayer p)) {
+            if (activePlayers.TryGetValue(playerState.Id, out ClientPlayer p)) {
                 p.UpdatePlayerState(playerState);
             }
         }
@@ -127,14 +184,42 @@ public class GameManager : MonoBehaviour {
     private void SpawnPlayer(PlayerSpawnData spawnData) {
         var go = Instantiate(playerPrefabs[spawnData.PrefabIndex]);
         var player = go.GetComponent<ClientPlayer>();
-        player.Initialize(spawnData.Id, spawnData.Name);
-        players.Add(spawnData.Id, player);
+        player.BulletHit += OnPlayerBulletHit;
+        player.Initialize(spawnData.Id, spawnData.Name, spawnData.Position);
+        activePlayers.Add(spawnData.Id, player);
+    }
+
+    private void DespawnPlayer(ushort id) {
+        if (activePlayers.TryGetValue(id, out ClientPlayer p)) {
+            p.BulletHit -= OnPlayerBulletHit;
+            Destroy(p.gameObject);
+            activePlayers.Remove(id);
+        } else if (inactivePlayers.TryGetValue(id, out p)) {
+            p.BulletHit -= OnPlayerBulletHit;
+            Destroy(p.gameObject);
+            inactivePlayers.Remove(id);
+        }
+    }
+
+    // Wenn ein Spieler getroffen wird deaktivieren wir ihn nur.
+    // Zerstört werden Spieler erst wenn sie das Spiel beenden oder disconnecten.
+    private void OnPlayerBulletHit(ushort playerId) { 
+        if (activePlayers.TryGetValue(playerId, out ClientPlayer p)) {
+            activePlayers.Remove(playerId);
+
+            p.gameObject.SetActive(false);
+            inactivePlayers.Add(playerId, p);
+        }
+
+        if (activePlayers.Count < 2) {
+            Debug.Log("round over");
+        }
     }
 
     private void OnBulletResponse(BulletResponseData responseData) => bulletResponses.Enqueue(responseData);
 
     private void SpawnBullet(BulletResponseData responseData) {
-        if (players.TryGetValue(responseData.PlayerId, out ClientPlayer p)) {
+        if (activePlayers.TryGetValue(responseData.PlayerId, out ClientPlayer p)) {
             var go = bulletPool.Obtain(true);
             var bullet = go.GetComponent<ClientBullet>();
             var spawnData = new BulletSpawnData(
@@ -144,13 +229,13 @@ public class GameManager : MonoBehaviour {
                 p.transform.forward
             );
             bullet.Initialize(spawnData);
-            activeBullets.Add(spawnData.Id, bullet);
+            activeBullets[spawnData.Id] = bullet;
         }
     }
 
     private void DespawnBullet(ushort bulletId) {
         if (activeBullets.TryGetValue(bulletId, out ClientBullet bullet)) {
-            Debug.Log($"despawning bullet {bulletId}");
+            //Debug.Log($"despawning bullet {bulletId}");
             bulletPool.Free(bullet.gameObject);
             activeBullets.Remove(bulletId);
         }

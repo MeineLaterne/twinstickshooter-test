@@ -68,3 +68,5 @@ MonoBehaviour:
   mapPrefabs:
   - {fileID: 4323433142207183944, guid: c4a1ea5199f9f054e9ce8be60062c4c2, type: 3}
   - {fileID: 5464557362397954723, guid: 558a8fa5d0f7d88439a8baee843955ec, type: 3}
+  - {fileID: 1561299900409576266, guid: 6564b6ba9834c4c418fc99a3f30751da, type: 3}
+  - {fileID: 5646881565292420797, guid: 28bac9404d7e73242b2e84c8640cd072, type: 3}
